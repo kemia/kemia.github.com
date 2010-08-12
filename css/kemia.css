@@ -347,7 +347,7 @@ See the COPYING file for details.
 /* State: resting. */
 .goog-menu-button {
   /* Client apps may override the URL at which they serve the image. */
-  background: #ddd url(../images/button-bg.png) repeat-x top left;
+  background: #ddd url(https://ssl.gstatic.com/editor/button-bg.png) repeat-x top left;
   border: 0;
   color: #000;
   cursor: pointer;
@@ -500,7 +500,7 @@ See the COPYING file for details.
 
 .goog-toolbar {
   /* Client apps may override the URL at which they serve the image. */
-  background: #fafafa url(../images/toolbar-bg.png) repeat-x bottom left;
+  background: #fafafa url(https://ssl.gstatic.com/editor/toolbar-bg.png) repeat-x bottom left;
   border-bottom: 1px solid #d5d5d5;
   cursor: default;
   font: normal 12px Arial, sans-serif;
@@ -827,17 +827,16 @@ See the COPYING file for details.
 
 /* Menu button caption style. */
 .goog-toolbar-menu-button-caption {
-  padding: 0 2px 0 0;
-  vertical-align: top;
+  padding: 0 4px 0 0;
+  vertical-align: middle;
 }
 
 /* Dropdown style. */
 .goog-toolbar-menu-button-dropdown {
   width: 7px;
   /* Client apps may override the URL at which they serve the sprite. */
- /* background: url(https://ssl.gstatic.com/editor/editortoolbar.png) no-repeat -388px; */
-  vertical-align: top;
-
+  background: url(https://ssl.gstatic.com/editor/editortoolbar.png) no-repeat -388px 0;
+  vertical-align: middle;
 }
 
 
@@ -872,8 +871,6 @@ See the COPYING file for details.
 }
 
 .goog-toolbar-select .goog-toolbar-menu-button-inner-box {
-  width: 30px;
-  height: 30px;
   border-width: 0 1px;
   border-style: solid;
   padding: 3px;
@@ -883,6 +880,18 @@ See the COPYING file for details.
 .goog-toolbar-select .goog-toolbar-menu-button-inner-box {
   border-color: #bfcbdf;
 }
+/*
+Use of this source code is governed by an Apache 2.0 License.
+See the COPYING file for details.
+*/
+
+/*
+ * Copyright 2008 Google Inc. All Rights Reserved
+ *
+ * Use of this source code is governed by an Apache 2.0 License.
+ * See the COPYING file for details.
+ */
+
 
 /*
  * Editor toolbar styles.
@@ -890,70 +899,6 @@ See the COPYING file for details.
 
  */
 
-/* Common base style for all icons. */
-.tr-icon {
-  width: 32px;
-  height: 32px;
-  background: url(../images/toolbar_icons.png) no-repeat;
-  vertical-align: middle;
+
 }
-
-/* Clear */
-.tr-clear {
-	background-position: -704px;
-}
-
-/* Zoom-in */
-.tr-zoom-in {
-	background-position: -544px;
-}
-
-/* Zoom-out */
-.tr-zoom-out {
-	background-position: -576px;
-}
-
-/* Undo (redo when the chrome is right-to-left). */
-.tr-undo,
-.goog-toolbar-button-rtl .tr-redo {
-  background-position: -448px;
-}
-
-/* Redo (undo when the chrome is right-to-left). */
-.tr-redo,
-.goog-toolbar-button-rtl .tr-undo {
-  background-position: -416px;
-}
-
-/* Erase */
-.tr-erase {
-	background-position: -32px;
-}
-
-/* Plus */
-.tr-plus {
-	background-position: -96px;
-}
-
-/* Arrow */
-.tr-arrow {
-	background-position: -128px;
-}
-
-/* Symbol */
-.tr-symbol {
-	background-position: -737px;
-}
-
-/* Bond */
-.tr-bond {
-	background-position: -768px;
-}
-
-/* Template */
-.tr-template {
-	background-position: -192px;
-}
-
-
 
