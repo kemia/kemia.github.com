@@ -41,40 +41,7 @@ See the COPYING file for details.
   color: #69c;
   border-color: #69c;
 }
-/*
-Use of this source code is governed by an Apache 2.0 License.
-See the COPYING file for details.
-*/
 
-/*
- * Copyright 2007 Google Inc. All Rights Reserved
- *
- * Use of this source code is governed by an Apache 2.0 License.
- * See the COPYING file for details.
- */
-
-/**/
-
-
-/*
-Use of this source code is governed by an Apache 2.0 License.
-See the COPYING file for details.
-*/
-
-/*
- * Copyright 2009 Google Inc. All Rights Reserved
- *
- * Use of this source code is governed by an Apache 2.0 License.
- * See the COPYING file for details.
- */
-
-/*
- * Cross-browser implementation of the "display: inline-block" CSS property.
- * See http://www.w3.org/TR/CSS21/visuren.html#propdef-display for details.
- * Tested on IE 6 & 7, FF 1.5 & 2.0, Safari 2 & 3, Webkit, and Opera 9.
- *
-
- */
 
 /*
  * Default rule; only Safari, Webkit, and Opera handle it without hacks.
@@ -113,18 +80,6 @@ See the COPYING file for details.
 }
 
 
-/*
-Use of this source code is governed by an Apache 2.0 License.
-See the COPYING file for details.
-*/
-
-/*
- * Copyright 2007 Google Inc. All Rights Reserved
- *
- * Use of this source code is governed by an Apache 2.0 License.
- * See the COPYING file for details.
- */
-
 /**/
 
 
@@ -157,14 +112,8 @@ See the COPYING file for details.
   list-style: none;
   margin: 0;
   /* 28px on the left for icon or checkbox; 10ex on the right for shortcut. */
-  padding: 4px 10ex 4px 28px;
+  padding: 4px 4px 4px 28px;
   white-space: nowrap;
-}
-
-/* BiDi override for the resting state. */
-.goog-menuitem-rtl {
-  /* Flip left/right padding for BiDi. */
-  padding: 4px 28px 4px 10ex !important;
 }
 
 /* State: disabled. */
@@ -181,7 +130,7 @@ See the COPYING file for details.
 /* State: selected/checked. */
 .goog-menuitem-checkbox,
 .goog-menuitem-icon {
-  height: 16px;
+  height: 8px;
   left: 6px;
   position: absolute;
   width: 16px;
@@ -191,13 +140,6 @@ See the COPYING file for details.
   background: transparent url(../images/check.gif) no-repeat center center;
 }
 
-/* BiDi override for the selected/checked state. */
-.goog-menuitem-rtl .goog-menuitem-checkbox,
-.goog-menuitem-rtl .goog-menuitem-icon {
-  /* Flip left/right positioning. */
-  right: 6px;
-  left: auto;
-}
 
 /* Keyboard shortcut ("accelerator") style. */
 .goog-menuitem-accel {
@@ -208,13 +150,6 @@ See the COPYING file for details.
   text-align: right;
 }
 
-/* BiDi override for shortcut style. */
-.goog-menuitem-rtl .goog-menuitem-accel {
-  /* Flip left/right positioning and text alignment. */
-  left: 0;
-  right: auto;
-  text-align: left;
-}
 
 /*
  * goog.ui.MenuSeparator
@@ -325,17 +260,6 @@ See the COPYING file for details.
 .goog-filterobsmenuitem-disabled {
   color: #999;
 }
-/*
-Use of this source code is governed by an Apache 2.0 License.
-See the COPYING file for details.
-*/
-
-/*
- * Copyright 2009 Google Inc. All Rights Reserved
- *
- * Use of this source code is governed by an Apache 2.0 License.
- * See the COPYING file for details.
- */
 
 /*
  * Standard styling for buttons created by goog.ui.MenuButtonRenderer.
@@ -347,7 +271,7 @@ See the COPYING file for details.
 /* State: resting. */
 .goog-menu-button {
   /* Client apps may override the URL at which they serve the image. */
-  background: #ddd url(https://ssl.gstatic.com/editor/button-bg.png) repeat-x top left;
+  background: #ddd url(../images/button-bg.png) repeat-x top left;
   border: 0;
   color: #000;
   cursor: pointer;
@@ -383,25 +307,13 @@ See the COPYING file for details.
   left: -1px;
 }
 
-/* Pre-IE7 BiDi fixes. */
-* html .goog-menu-button-rtl .goog-menu-button-outer-box {
-  /* @noflip */ left: -1px;
-  /* @noflip */ right: auto;
-}
-* html .goog-menu-button-rtl .goog-menu-button-inner-box {
-  /* @noflip */ right: auto;
-}
 
 /* IE7-only hack; ignored by all other browsers. */
 *:first-child+html .goog-menu-button-inner-box {
   /* IE7 needs to have the box shifted to make the borders line up. */
   left: -1px;
 }
-/* IE7 BiDi fix. */
-*:first-child+html .goog-menu-button-rtl .goog-menu-button-inner-box {
-  /* @noflip */ left: 1px;
-  /* @noflip */ right: auto;
-}
+
 
 /* Safari-only hacks. */
 ::root .goog-menu-button,
@@ -475,23 +387,6 @@ See the COPYING file for details.
   background: url(https://ssl.gstatic.com/editor/editortoolbar.png) no-repeat -388px 0;
   vertical-align: top;
 }
-/*
-Use of this source code is governed by an Apache 2.0 License.
-See the COPYING file for details.
-*/
-
-/*
- * Copyright 2009 Google Inc. All Rights Reserved
- *
- * Use of this source code is governed by an Apache 2.0 License.
- * See the COPYING file for details.
- */
-
-/*
- * Standard styling for toolbars and toolbar items.
- *
-
- */
 
 
 /*
@@ -500,7 +395,7 @@ See the COPYING file for details.
 
 .goog-toolbar {
   /* Client apps may override the URL at which they serve the image. */
-  background: #fafafa url(https://ssl.gstatic.com/editor/toolbar-bg.png) repeat-x bottom left;
+  background: #fafafa url(../images/toolbar-bg.png) repeat-x bottom left;
   border-bottom: 1px solid #d5d5d5;
   cursor: default;
   font: normal 12px Arial, sans-serif;
@@ -827,16 +722,17 @@ See the COPYING file for details.
 
 /* Menu button caption style. */
 .goog-toolbar-menu-button-caption {
-  padding: 0 4px 0 0;
-  vertical-align: middle;
+  padding: 0 2px 0 0;
+  vertical-align: bottom;
 }
 
 /* Dropdown style. */
 .goog-toolbar-menu-button-dropdown {
   width: 7px;
   /* Client apps may override the URL at which they serve the sprite. */
-  background: url(https://ssl.gstatic.com/editor/editortoolbar.png) no-repeat -388px 0;
-  vertical-align: middle;
+  background: url(https://ssl.gstatic.com/editor/editortoolbar.png) no-repeat -388px 0; 
+  vertical-align: top;
+
 }
 
 
@@ -871,6 +767,8 @@ See the COPYING file for details.
 }
 
 .goog-toolbar-select .goog-toolbar-menu-button-inner-box {
+  width: 14px;
+  height: 14px;
   border-width: 0 1px;
   border-style: solid;
   padding: 3px;
@@ -880,18 +778,6 @@ See the COPYING file for details.
 .goog-toolbar-select .goog-toolbar-menu-button-inner-box {
   border-color: #bfcbdf;
 }
-/*
-Use of this source code is governed by an Apache 2.0 License.
-See the COPYING file for details.
-*/
-
-/*
- * Copyright 2008 Google Inc. All Rights Reserved
- *
- * Use of this source code is governed by an Apache 2.0 License.
- * See the COPYING file for details.
- */
-
 
 /*
  * Editor toolbar styles.
@@ -899,6 +785,75 @@ See the COPYING file for details.
 
  */
 
-
+/* Common base style for all icons. */
+.tr-icon {
+  width: 16px;
+  height: 16px;
+  background: url(../images/toolbar_icons.png) no-repeat;
+  vertical-align: middle;
 }
+
+/* Clear */
+.tr-clear {
+	background-position: -248px;
+}
+
+/* Zoom-in */
+.tr-zoom-in {
+	background-position: -264px;
+}
+
+/* Zoom-out */
+.tr-zoom-out {
+	background-position: -280px;
+}
+
+/* Undo (redo when the chrome is right-to-left). */
+.tr-undo,
+.goog-toolbar-button-rtl .tr-redo {
+  background-position: -32px;
+}
+
+/* Redo (undo when the chrome is right-to-left). */
+.tr-redo,
+.goog-toolbar-button-rtl .tr-undo {
+  background-position: -48px;
+}
+
+/* Erase */
+.tr-erase {
+	background-position: -126px;
+}
+
+/* Plus */
+.tr-plus {
+	background-position: -216px;
+}
+
+/* Arrow */
+.tr-arrow {
+	background-position: -232px;
+}
+
+/* Symbol */
+.tr-symbol {
+	background-position: -294px;
+}
+
+/* Bond */
+.tr-bond {
+	background-position: -184px;
+}
+
+/* Template */
+.tr-template {
+	background-position: -200px;
+}
+
+/* Cleanup */
+.tr-cleanup {
+	background-position: -138px;
+}
+
+
 
