@@ -800,12 +800,12 @@ See the COPYING file for details.
 
 /* Zoom-in */
 .tr-zoom-in {
-	background-position: -264px;
+	background-position: -280px;
 }
 
 /* Zoom-out */
 .tr-zoom-out {
-	background-position: -280px;
+	background-position: -264px;
 }
 
 /* Undo (redo when the chrome is right-to-left). */
