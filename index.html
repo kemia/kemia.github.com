@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Kemia Demo</title>
+<title>Kemia Reaction Editor and Cheminformatics Library</title>
 <!-- 
 <script src="build/kemia-advanced.js"></script>
 <script src="build/kemia-simple.js"></script>
@@ -12,7 +12,7 @@
 <script src="kemia/io/io_test_molsample2.js"></script>
 
 <link rel="stylesheet" href="css/kemia.css" />
-<link rel="stylesheet"	href="css/demo.css" />
+<link rel="stylesheet" href="css/demo.css" />
 
 <script>
 function initPage(){
@@ -67,19 +67,29 @@ function initPage(){
           var mol=kemia.io.mdl.readMolfile(molfile);
 	      mol_renderer.setModels([mol]);
 	      goog.dom.setTextContent(goog.dom.getElement('perf'), (goog.now() - timer) + 'ms');
-        });
-        
-
-
-	
+        });	
 };
 </script>
 </head>
 
 <body onload="initPage();">
 <h1>Kemia</h1>
-<fieldset>
-<legend>Reaction Editor</legend>
+<div>
+<h1>Introduction and Welcome</h1>
+<p>Welcome to kemia! An open source (Apache Licensed) chemical
+structure and reaction editor. Our mission is to create the
+world&#8217;s first open source, 100% javascript chemistry toolkit. Why?
+Because chemists are asking for tools that run in a web browser and
+scientific discovery works better when collaborative technologies, like
+the web, are utilized in a scientific context. This work is a
+collaboration between open source developers at the <a
+	href="http://www.ebi.ac.uk"> European Bioinformatics Institute</a> and
+<a href="http://www.wingu.com">Wingu Inc.</a></p>
+<h1>What can Kemia Do Today?</h1>
+</div>
+<p>Try out the Reaction Editor and Molecule Renderer Demos. Read on
+for a list of features and more information.</p>
+<fieldset><legend>Reaction Editor Demo</legend>
 <table style="width: 100%">
 	<tr>
 		<td>
@@ -88,29 +98,85 @@ function initPage(){
 	</tr>
 	<tr>
 		<td>
-		<div
-			style="height: 400px; overflow: auto; padding: 5px">
+		<div style="height: 400px; overflow: auto; padding: 5px">
 		<div id="reactionEditorContainer" style="height: 400px"></div>
 		</div>
 		</td>
 	</tr>
-
 </table>
 
 </fieldset>
-<h1>Kemia</h1>
-<fieldset>
-<legend>Molecule Renderer</legend> 
-<br>
-<label id="selectMolecule">Select a molecule to render: </label>
-<br>
+<fieldset><legend>Molecule Renderer Demo</legend> <br>
+<label id="selectMolecule">Select a molecule to render: </label> <br>
 
 <br>
-<div id="moleculeContainer" style="width: 100%; height: 600px"></div>
+<div id="moleculeContainer" style="width: 100%; height: 400px"></div>
 <br>
 </fieldset>
-  <div id="perf"></div> 
-<br> 
+<h2>Features</h2>
+<p>
+<ul>
+	<li>Easy-to-use, intuitive editor</li>
+	<li><a href="smiles.html">SMILES parser</a></li>
+	<li>Coordinate Generation</li>
+	<li>Molfile parser</li>
+	<li>Speed. Renders Buckyball (select 3 above) in 809ms on Google
+	Chrome</li>
+	<li>Easily extendible via plugin architecture</li>
+</ul>
+</p>
+
+<h2>Requirements</h2>
+<p>
+<ul>
+	<li>Pure Javascript</li>
+	<li>Works on popular browsers</li>
+</ul>
+</p>
+<h2>Roadmap</h2>
+<p>
+<ul>
+	<li>Status</li>
+	<ul>
+		<li>Kemia is pre-alpha software that runs and mostly works.</li>
+	</ul>
+	<li>Current work</li>
+	<ul>
+		<li>Eliminate bugs that impact usability</li>
+		<li>SMILES generation</li>
+	</ul>
+</ul>
+</p>
+
+
+<h2>Downloads (coming soon)</h2>
+<p>
+<ul>
+	<li><a href="http://github.com/kemia/kemia/downloads">Download
+	page</a></li>
+</ul>
+</p>
+
+<h2>Getting Started</h2>
+<ul>
+	<li>See the <a
+		href="http://wiki.github.com/kemia/kemia/getting-started">getting
+	started page</a> for information on hacking Kemia.</li>
+</ul>
+
+
+<h2>Alright I&#8217;m convinced, how do I get involved?</h2>
+<ul>
+	<li>See the <a
+		href="http://wiki.github.com/kemia/kemia/getting-involved">Getting
+	Involved</a> page.</li>
+	<li><a href="http://github.com/kemia/kemia">Project Page</a> on
+	github.</li>
+</ul>
+
+</div>
+<div id="perf"></div>
+<br>
 
 </body>
 </html>
