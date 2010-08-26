@@ -43,7 +43,7 @@
 	    <h4>Demos</h4>
 	    <p> 
 	      {% for demo in site.categories.demos %}
-	      <a href="{{demo.url}}">{{demo.title}}</a><br>
+	      <a href="http://{{demo.url}}">{{demo.title}}</a><br>
 	      {% endfor %}
 	    </p>
 	  </div>
@@ -52,7 +52,7 @@
             <h4><a href="atom.xml" id="rss_feed" name="rss_feed">Blog Posts</a></h4>
             <p>
               {% for post in site.categories.blog %} 
-                <span>{{ post.date | date_to_string }}</span> » <a href="{{ post.url }}">{{ post.title }}</a><br>
+                <span>http://{{ post.date | date_to_string }}</span> » <a href="{{ post.url }}">{{ post.title }}</a><br>
               {% endfor %}
             </p>
           </div>
