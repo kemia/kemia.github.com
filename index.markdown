@@ -11,7 +11,7 @@ Why?  Because chemists are asking for tools that run in a web browser and scient
 
 #What can Kemia Do Today?
 
-Try out the Demos:
+Try out the [Demo](http://kemia.github.com/demos/2010/08/23/reaction-editor-demo.html).
 
 #Features
 
@@ -19,7 +19,7 @@ Try out the Demos:
 * SMILES parser
 * Coordinate Generation
 * Molfile parser
-* Speed. Renders Buckyball (select 3 above) in 809ms on Google Chrome
+* Fast
 * Easily extendible via plugin architecture
 
 #Requirements
@@ -36,13 +36,13 @@ Try out the Demos:
     * SMILES generation
 
 #Downloads (coming soon)
-* Download page
+* [Download page](http://github.com/kemia/kemia/downloads)
 
 #Getting Started
-* See the getting started page for information on hacking Kemia.
+* See the [getting started page](http://wiki.github.com/kemia/kemia/getting-started) for information on hacking Kemia.
 
 #Alright I’m convinced, how do I get involved?
 
-* See the Getting Involved page.
-* Project Page on github.
+* See the [Getting Involved](http://wiki.github.com/kemia/kemia/getting-involved) page.
+* [Project Page](http://github.com/kemia/kemia) on github.
 

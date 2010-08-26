@@ -3,8 +3,46 @@ layout: default
 title: Kemia Reaction Editor
 ---
 
-This project <a href="http://github.com/kemia/kemia.github.com">Kemia Reaction Editor</a> is awesome.
+#Introduction and Welcome
 
-To enable Disqus comments + badges for this site, [add it to your Disqus account](http://disqus.com/add/).
+Welcome to kemia! An open source (Apache Licensed) chemical structure and reaction editor. Our mission is to create the world’s first open source, 100% javascript chemistry toolkit.  
 
-Also, you can/should [create a Lighthouse project](http://kemia.lighthouseapp.com/projects/new) for your project and update "TODO" within the _layouts files with the project id (e.g. "12345-kemia.github.com" from the Lighthouse project url).
+Why?  Because chemists are asking for tools that run in a web browser and scientific discovery works better when collaborative technologies, like the web, are utilized in a scientific context. This work is a collaboration between open source developers at the [European Bioinformatics Institute](http://www.ebi.ac.uk/ "EBI") and [Wingu Inc.](http://wingu.com "Wingu")
+
+#What can Kemia Do Today?
+
+Try out the Demos:
+
+#Features
+
+* Easy-to-use, intuitive editor
+* SMILES parser
+* Coordinate Generation
+* Molfile parser
+* Speed. Renders Buckyball (select 3 above) in 809ms on Google Chrome
+* Easily extendible via plugin architecture
+
+#Requirements
+
+* Pure Javascript
+* Works on popular browsers
+
+#Roadmap
+
+* Status  
+    * Kemia is pre-alpha software that runs and mostly works.
+* Current work  
+    * Eliminate bugs that impact usability  
+    * SMILES generation
+
+#Downloads (coming soon)
+* Download page
+
+#Getting Started
+* See the getting started page for information on hacking Kemia.
+
+#Alright I’m convinced, how do I get involved?
+
+* See the Getting Involved page.
+* Project Page on github.
+

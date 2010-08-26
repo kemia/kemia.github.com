@@ -2,13 +2,13 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
  
  <title>Kemia Reaction Editor</title>
- <link href="http://kemia.github.com/kemia.github.com/atom.xml" rel="self"/>
- <link href="http://kemia.github.com/kemia.github.com/"/>
- <updated>2010-08-25T19:31:01-04:00</updated>
- <id>http://kemia.github.com/kemia.github.com/</id>
+ <link href="http://kemia.github.com/atom.xml" rel="self"/>
+ <link href="http://kemia.github.com/"/>
+ <updated>2010-08-26T11:11:56-04:00</updated>
+ <id>http://kemia.github.com</id>
  <author>
-   <name>Dr Nic Williams</name>
-   <email>kemiawilliams@gmail.com</email>
+   <name>Paul Novak</name>
+   <email>paul@wingu.com</email>
  </author>
 
  
@@ -16,7 +16,7 @@
    <title>Smiles Demo</title>
    <link href="http://kemia.github.com/kemia.github.com/demos/2010/08/24/smiles-demo.html"/>
    <updated>2010-08-24T00:00:00-04:00</updated>
-   <id>http://kemia.github.com/kemia.github.com/demos/2010/08/24/smiles-demo</id>
+   <id>http://kemia.github.com//demos/2010/08/24/smiles-demo</id>
    <content type="html">&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD HTML 4.01 Transitional//EN&quot; &quot;http://www.w3.org/TR/html4/loose.dtd&quot;&gt;
 &lt;html&gt;
 &lt;head&gt;
@@ -126,7 +126,7 @@ var prompt = new goog.ui.Prompt(
    <title>Reaction Editor Demo</title>
    <link href="http://kemia.github.com/kemia.github.com/demos/2010/08/23/reaction-editor-demo.html"/>
    <updated>2010-08-23T00:00:00-04:00</updated>
-   <id>http://kemia.github.com/kemia.github.com/demos/2010/08/23/reaction-editor-demo</id>
+   <id>http://kemia.github.com//demos/2010/08/23/reaction-editor-demo</id>
    <content type="html">&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD HTML 4.01 Transitional//EN&quot; &quot;http://www.w3.org/TR/html4/loose.dtd&quot;&gt;
 &lt;html&gt;
 &lt;head&gt;
@@ -237,7 +237,7 @@ function initPage(){
    <title>Kemia at ACS Boston 2010 CINF Lightning Talks</title>
    <link href="http://kemia.github.com/kemia.github.com/blog/2010/08/23/acs-cinf-lightning-talk.html"/>
    <updated>2010-08-23T00:00:00-04:00</updated>
-   <id>http://kemia.github.com/kemia.github.com/blog/2010/08/23/acs-cinf-lightning-talk</id>
+   <id>http://kemia.github.com//blog/2010/08/23/acs-cinf-lightning-talk</id>
    <content type="html">&lt;p&gt;We are presenting &amp;#8220;Kemia-A Pure Javascript Library for Cheminformatics&amp;#8221; at ACS Boston 2010, &lt;a href='http://rguha.net/cinftmp/flash.html'&gt;CINF Lightning Talks&lt;/a&gt; on Monday August 23, 2010 at 2:45 pm.&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;Abstract&lt;/strong&gt; The Web was invented by Time Berners-Lee to allow physicists around the world to share and disseminate experimental results electronically. Today, we see this invention extended further to allow friends, relatives and consumers to share their personal lives online through &amp;#8220;Web 2.0&amp;#8221; technologies. At Wingu Inc. we believe scientists, should be able to consume of these technologies to manage, share and disseminate scientific results in geographically disparate locations the way consumers do today. Toward that end, we present Kemia, an open source pure javascript 2D molecule and reaction editor that allows chemists to view, edit and share compound information on the web without requiring non-standard web technology or installation procedure. A demonstration of this technology, pointers to the source code and future work will be presented.&lt;/p&gt;</content>

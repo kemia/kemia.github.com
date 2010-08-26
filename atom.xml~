@@ -5,13 +5,13 @@ layout: nil
 <feed xmlns="http://www.w3.org/2005/Atom">
  
  <title>Kemia Reaction Editor</title>
- <link href="http://kemia.github.com/atom.xml" rel="self"/>
- <link href="http://kemia.github.com/"/>
+ <link href="http://kemia.github.com/kemia.github.com/atom.xml" rel="self"/>
+ <link href="http://kemia.github.com/kemia.github.com/"/>
  <updated>{{ site.time | date_to_xmlschema }}</updated>
- <id>http://kemia.github.com</id>
+ <id>http://kemia.github.com/kemia.github.com/</id>
  <author>
-   <name>Paul Novak</name>
-   <email>paul@wingu.com</email>
+   <name>Dr Nic Williams</name>
+   <email>kemiawilliams@gmail.com</email>
  </author>
 
  {% for post in site.posts %}
@@ -19,7 +19,7 @@ layout: nil
    <title>{{ post.title }}</title>
    <link href="http://kemia.github.com/kemia.github.com{{ post.url }}"/>
    <updated>{{ post.date | date_to_xmlschema }}</updated>
-   <id>http://kemia.github.com/{{ post.id }}</id>
+   <id>http://kemia.github.com/kemia.github.com{{ post.id }}</id>
    <content type="html">{{ post.content | xml_escape }}</content>
  </entry>
  {% endfor %}
