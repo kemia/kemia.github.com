@@ -4,7 +4,7 @@
  <title>Kemia Reaction Editor</title>
  <link href="http://kemia.github.com/atom.xml" rel="self"/>
  <link href="http://kemia.github.com/"/>
- <updated>2010-08-26T11:15:12-04:00</updated>
+ <updated>2010-08-26T13:57:46-04:00</updated>
  <id>http://kemia.github.com</id>
  <author>
    <name>Paul Novak</name>
@@ -16,7 +16,7 @@
    <title>Smiles Demo</title>
    <link href="http://kemia.github.com/kemia.github.com/demos/2010/08/24/smiles-demo.html"/>
    <updated>2010-08-24T00:00:00-04:00</updated>
-   <id>http://kemia.github.com//demos/2010/08/24/smiles-demo</id>
+   <id>http:///demos/2010/08/24/smiles-demo</id>
    <content type="html">&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD HTML 4.01 Transitional//EN&quot; &quot;http://www.w3.org/TR/html4/loose.dtd&quot;&gt;
 &lt;html&gt;
 &lt;head&gt;
@@ -126,7 +126,7 @@ var prompt = new goog.ui.Prompt(
    <title>Reaction Editor Demo</title>
    <link href="http://kemia.github.com/kemia.github.com/demos/2010/08/23/reaction-editor-demo.html"/>
    <updated>2010-08-23T00:00:00-04:00</updated>
-   <id>http://kemia.github.com//demos/2010/08/23/reaction-editor-demo</id>
+   <id>http:///demos/2010/08/23/reaction-editor-demo</id>
    <content type="html">&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD HTML 4.01 Transitional//EN&quot; &quot;http://www.w3.org/TR/html4/loose.dtd&quot;&gt;
 &lt;html&gt;
 &lt;head&gt;
@@ -165,6 +165,77 @@ function initPage(){
 	editor.setModels([model]);
 	var sdfs = sdf.split(&quot;$$$$\n&quot;);
 	var mol_renderer = new kemia.controller.ReactionEditor(goog.dom.getElement('moleculeContainer'),{background : {color : 'white'}});
+  
+};
+&lt;/script&gt;
+&lt;/head&gt;
+
+&lt;body onload=&quot;initPage();&quot;&gt;
+&lt;h1&gt;Kemia&lt;/h1&gt;
+
+&lt;fieldset&gt;&lt;legend&gt;Reaction Editor Demo&lt;/legend&gt;
+&lt;table style=&quot;width: 100%&quot;&gt;
+	&lt;tr&gt;
+		&lt;td&gt;
+		&lt;div id=&quot;reactionEditorToolbar&quot;&gt;&lt;/div&gt;
+		&lt;/td&gt;
+	&lt;/tr&gt;
+	&lt;tr&gt;
+		&lt;td&gt;
+		&lt;div style=&quot;height: 400px; overflow: auto; padding: 5px&quot;&gt;
+		&lt;div id=&quot;reactionEditorContainer&quot; style=&quot;height: 400px&quot;&gt;&lt;/div&gt;
+		&lt;/div&gt;
+		&lt;/td&gt;
+	&lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;/fieldset&gt;
+&lt;/div&gt;
+&lt;div id=&quot;perf&quot;&gt;&lt;/div&gt;
+&lt;br&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Kemia at ACS Boston 2010 CINF Lightning Talks</title>
+   <link href="http://kemia.github.com/kemia.github.com/blog/2010/08/23/acs-cinf-lightning-talk.html"/>
+   <updated>2010-08-23T00:00:00-04:00</updated>
+   <id>http:///blog/2010/08/23/acs-cinf-lightning-talk</id>
+   <content type="html">&lt;p&gt;We are presenting &amp;#8220;Kemia-A Pure Javascript Library for Cheminformatics&amp;#8221; at ACS Boston 2010, &lt;a href='http://rguha.net/cinftmp/flash.html'&gt;CINF Lightning Talks&lt;/a&gt; on Monday August 23, 2010 at 2:45 pm.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Abstract&lt;/strong&gt; The Web was invented by Time Berners-Lee to allow physicists around the world to share and disseminate experimental results electronically. Today, we see this invention extended further to allow friends, relatives and consumers to share their personal lives online through &amp;#8220;Web 2.0&amp;#8221; technologies. At Wingu Inc. we believe scientists, should be able to consume of these technologies to manage, share and disseminate scientific results in geographically disparate locations the way consumers do today. Toward that end, we present Kemia, an open source pure javascript 2D molecule and reaction editor that allows chemists to view, edit and share compound information on the web without requiring non-standard web technology or installation procedure. A demonstration of this technology, pointers to the source code and future work will be presented.&lt;/p&gt;</content>
+ </entry>
+ 
+ <entry>
+   <title>Molecule Rendering</title>
+   <link href="http://kemia.github.com/kemia.github.com/demos/2010/08/17/molecule-rendering.html"/>
+   <updated>2010-08-17T00:00:00-04:00</updated>
+   <id>http:///demos/2010/08/17/molecule-rendering</id>
+   <content type="html">&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD HTML 4.01 Transitional//EN&quot; &quot;http://www.w3.org/TR/html4/loose.dtd&quot;&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;&gt;
+&lt;title&gt;Kemia Reaction Editor and Cheminformatics Library&lt;/title&gt;
+
+&lt;script src=&quot;../../../../js/kemia-whitespace-only.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;../../../../js/json_test_rxn.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;../../../../js/io_test_molsample2.js&quot;&gt;&lt;/script&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;../../../../css/kemia.css&quot; /&gt;
+&lt;link rel=&quot;stylesheet&quot;	href=&quot;../../../../css/demo.css&quot; /&gt;
+
+&lt;script&gt;
+function initPage(){
+
+// uncomment next two lines to debug to console
+	//var c = new goog.debug.Console(); 
+	//c.setCapturing(true); 
+
+
+	var sdfs = sdf.split(&quot;$$$$\n&quot;);
+	var mol_renderer = new kemia.controller.ReactionEditor(goog.dom.getElement('moleculeContainer'),{background : {color : 'white'}});
  
     var select1 = new goog.ui.Select();
     select1.addItem(new goog.ui.MenuItem('1', 1));
@@ -200,23 +271,6 @@ function initPage(){
 &lt;body onload=&quot;initPage();&quot;&gt;
 &lt;h1&gt;Kemia&lt;/h1&gt;
 
-&lt;fieldset&gt;&lt;legend&gt;Reaction Editor Demo&lt;/legend&gt;
-&lt;table style=&quot;width: 100%&quot;&gt;
-	&lt;tr&gt;
-		&lt;td&gt;
-		&lt;div id=&quot;reactionEditorToolbar&quot;&gt;&lt;/div&gt;
-		&lt;/td&gt;
-	&lt;/tr&gt;
-	&lt;tr&gt;
-		&lt;td&gt;
-		&lt;div style=&quot;height: 400px; overflow: auto; padding: 5px&quot;&gt;
-		&lt;div id=&quot;reactionEditorContainer&quot; style=&quot;height: 400px&quot;&gt;&lt;/div&gt;
-		&lt;/div&gt;
-		&lt;/td&gt;
-	&lt;/tr&gt;
-&lt;/table&gt;
-
-&lt;/fieldset&gt;
 &lt;fieldset&gt;&lt;legend&gt;Molecule Renderer Demo&lt;/legend&gt; &lt;br&gt;
 &lt;label id=&quot;selectMolecule&quot;&gt;Select a molecule to render: &lt;/label&gt; &lt;br&gt;
 
@@ -231,16 +285,6 @@ function initPage(){
 &lt;/body&gt;
 &lt;/html&gt;
 </content>
- </entry>
- 
- <entry>
-   <title>Kemia at ACS Boston 2010 CINF Lightning Talks</title>
-   <link href="http://kemia.github.com/kemia.github.com/blog/2010/08/23/acs-cinf-lightning-talk.html"/>
-   <updated>2010-08-23T00:00:00-04:00</updated>
-   <id>http://kemia.github.com//blog/2010/08/23/acs-cinf-lightning-talk</id>
-   <content type="html">&lt;p&gt;We are presenting &amp;#8220;Kemia-A Pure Javascript Library for Cheminformatics&amp;#8221; at ACS Boston 2010, &lt;a href='http://rguha.net/cinftmp/flash.html'&gt;CINF Lightning Talks&lt;/a&gt; on Monday August 23, 2010 at 2:45 pm.&lt;/p&gt;
-
-&lt;p&gt;&lt;strong&gt;Abstract&lt;/strong&gt; The Web was invented by Time Berners-Lee to allow physicists around the world to share and disseminate experimental results electronically. Today, we see this invention extended further to allow friends, relatives and consumers to share their personal lives online through &amp;#8220;Web 2.0&amp;#8221; technologies. At Wingu Inc. we believe scientists, should be able to consume of these technologies to manage, share and disseminate scientific results in geographically disparate locations the way consumers do today. Toward that end, we present Kemia, an open source pure javascript 2D molecule and reaction editor that allows chemists to view, edit and share compound information on the web without requiring non-standard web technology or installation procedure. A demonstration of this technology, pointers to the source code and future work will be presented.&lt;/p&gt;</content>
  </entry>
  
  

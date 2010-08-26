@@ -36,7 +36,34 @@ function initPage(){
 	editor.setModels([model]);
 	var sdfs = sdf.split("$$$$\n");
 	var mol_renderer = new kemia.controller.ReactionEditor(goog.dom.getElement('moleculeContainer'),{background : {color : 'white'}});
-  
+ 
+    var select1 = new goog.ui.Select();
+    select1.addItem(new goog.ui.MenuItem('1', 1));
+    select1.addItem(new goog.ui.MenuItem('2', 2));
+    select1.addItem(new goog.ui.MenuItem('3 (bucky ball)', 3));
+    select1.addItem(new goog.ui.MenuItem('4', 4));
+    select1.addItem(new goog.ui.MenuItem('5', 5));
+    select1.addItem(new goog.ui.MenuItem('6', 6));
+    select1.addItem(new goog.ui.MenuItem('7', 7));
+    select1.addItem(new goog.ui.MenuItem('8', 8));
+    select1.addItem(new goog.ui.MenuItem('9', 9));
+    select1.addItem(new goog.ui.MenuItem('10', 10));
+    select1.addItem(new goog.ui.MenuItem('11 (not too large now!)', 11));
+    select1.addItem(new goog.ui.MenuItem('12', 12));
+    
+    select1.setSelectedIndex(0);
+    select1.render(goog.dom.getElement('selectMolecule'));
+    
+        goog.events.listen(select1, goog.ui.Component.EventType.ACTION,
+        function(e) {
+          var timer = goog.now();
+          var select = e.target;
+          var idx = select.getValue();
+          var molfile=sdfs[idx];
+          var mol=kemia.io.mdl.readMolfile(molfile);
+	      mol_renderer.setModels([mol]);
+	      goog.dom.setTextContent(goog.dom.getElement('perf'), (goog.now() - timer) + 'ms');
+        });	
 };
 </script>
 </head>
@@ -60,6 +87,13 @@ function initPage(){
 	</tr>
 </table>
 
+</fieldset>
+<fieldset><legend>Molecule Renderer Demo</legend> <br>
+<label id="selectMolecule">Select a molecule to render: </label> <br>
+
+<br>
+<div id="moleculeContainer" style="width: 100%; height: 400px"></div>
+<br>
 </fieldset>
 </div>
 <div id="perf"></div>
