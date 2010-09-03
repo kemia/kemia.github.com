@@ -31,9 +31,7 @@ Try out the [Demo](http://kemia.github.com/demos/2010/08/23/reaction-editor.html
 
 * Status  
     * Kemia is pre-alpha software that runs and mostly works.
-* Current work  
-    * Eliminate bugs that impact usability  
-    * SMILES generation
+* Planned [Milestones](http://kemia.lighthouseapp.com/projects/58696-kemia/milestones)
 
 #Downloads (coming soon)
 * [Download page](http://github.com/kemia/kemia/downloads)

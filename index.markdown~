@@ -11,7 +11,7 @@ Why?  Because chemists are asking for tools that run in a web browser and scient
 
 #What can Kemia Do Today?
 
-Try out the [Demo](http://kemia.github.com/demos/2010/08/23/reaction-editor-demo.html).
+Try out the [Demo](http://kemia.github.com/demos/2010/08/23/reaction-editor.html).
 
 #Features
 
