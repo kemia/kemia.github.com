@@ -6,3 +6,4 @@ docs/symbols
 .project
 build
 *~
+_site

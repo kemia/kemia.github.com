@@ -5,17 +5,11 @@
 <title>Kemia Reaction Editor and Cheminformatics Library</title>
 
 <!--  paths after jekyll processing -->
-<script src="../../../../js/kemia-advanced.js"></script>
+<script src="../../../../js/kemia-whitespace-only.js"></script>
 <script src="../../../../js/json_test_rxn.js"></script>
 <script src="../../../../js/io_test_molsample2.js"></script>
 <link rel="stylesheet" href="../../../../css/kemia.css" />
 <link rel="stylesheet"	href="../../../../css/demo.css" />
-<!--  paths for dev -->
-<script src="../../js/kemia-advanced.js"></script>
-<script src="../../js/json_test_rxn.js"></script>
-<script src="../../js/io_test_molsample2.js"></script>
-<link rel="stylesheet" href="../../css/kemia.css" />
-<link rel="stylesheet"	href="../../css/demo.css" />
 
 
 <script>
@@ -30,10 +24,10 @@ function initPage(){
 	model.reagentsText = "NaOH";
 	model.conditionsText = "90" + String.fromCharCode(186) +"C";
 	var editor = new kemia.controller.ReactionEditor(goog.dom.getElement('reactionEditorContainer'),{background : {color : 'white'}});
+	editor.registerPlugin(new kemia.controller.plugins.Move());
 	editor.registerPlugin(new kemia.controller.plugins.ClearEditor());
 	editor.registerPlugin(new kemia.controller.plugins.Zoom());
 	editor.registerPlugin(new kemia.controller.plugins.UndoRedo());
-	editor.registerPlugin(new kemia.controller.plugins.Highlight());
 	editor.registerPlugin(new kemia.controller.plugins.Erase());
 	editor.registerPlugin(new kemia.controller.plugins.AtomEdit());
 	editor.registerPlugin(new kemia.controller.plugins.BondEdit());

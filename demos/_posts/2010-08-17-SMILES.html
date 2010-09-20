@@ -68,7 +68,7 @@ function initPage(){
 var promptHandler = function(smiles) {
   if (smiles != null) {
     var timer = goog.now();
-    var mol=kemia.io.smiles.parse(smiles);
+    var mol=kemia.io.smiles.SmilesParser.parse(smiles);
     kemia.layout.CoordinateGenerator.generate(mol);
     mol_renderer.setModels([mol]);
     goog.dom.setTextContent(goog.dom.getElement('perf'), (goog.now() - timer) + 'ms');

@@ -271,7 +271,7 @@ See the COPYING file for details.
 /* State: resting. */
 .goog-menu-button {
   /* Client apps may override the URL at which they serve the image. */
-  background: #ddd url(../images/button-bg.png) repeat-x top left;
+  background: #ddd url(../images/button-bg.gif) repeat-x top left;
   border: 0;
   color: #000;
   cursor: pointer;
@@ -767,7 +767,7 @@ See the COPYING file for details.
 }
 
 .goog-toolbar-select .goog-toolbar-menu-button-inner-box {
-  width: 14px;
+  width: 64px;
   height: 14px;
   border-width: 0 1px;
   border-style: solid;
@@ -820,6 +820,11 @@ See the COPYING file for details.
   background-position: -48px;
 }
 
+/* Move */
+.tr-move {
+	background-position: -310px;
+}
+
 /* Erase */
 .tr-erase {
 	background-position: -126px;
@@ -852,7 +857,11 @@ See the COPYING file for details.
 
 /* Cleanup */
 .tr-cleanup {
-	background-position: -138px;
+	background-position: -142px;
+}
+
+kemia-eraser {
+	cursor: move;
 }
 
 
