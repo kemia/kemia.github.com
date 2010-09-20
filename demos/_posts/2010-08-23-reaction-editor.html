@@ -12,7 +12,7 @@
 <link rel="stylesheet"	href="../../../../css/demo.css" />
 
 
-<script>
+<script><!--
 function initPage(){
 
 // uncomment next two lines to debug to console
@@ -27,7 +27,7 @@ function initPage(){
 	editor.registerPlugin(new kemia.controller.plugins.Move());
 	editor.registerPlugin(new kemia.controller.plugins.ClearEditor());
 	editor.registerPlugin(new kemia.controller.plugins.Zoom());
-	editor.registerPlugin(new kemia.controller.plugins.UndoRedo());
+//	editor.registerPlugin(new kemia.controller.plugins.UndoRedo());
 	editor.registerPlugin(new kemia.controller.plugins.Erase());
 	editor.registerPlugin(new kemia.controller.plugins.AtomEdit());
 	editor.registerPlugin(new kemia.controller.plugins.BondEdit());
@@ -40,7 +40,7 @@ function initPage(){
 	var mol_renderer = new kemia.controller.ReactionEditor(goog.dom.getElement('moleculeContainer'),{background : {color : 'white'}});
   
 };
-</script>
+--></script>
 </head>
 
 <body onload="initPage();">
