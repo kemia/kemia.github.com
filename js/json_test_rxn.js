@@ -404,8 +404,8 @@ reactionDrawing = {
 		} ]
 	} ],
 	"header" : null,
-	"reagents_text" : "foo reagent",
-	"conditions_text" : "bar conditions",
+	"reagents_text" : "NaOH",
+	"conditions_text" : "90 C",
 	"arrows" : [{"source":{"x":13,'y':1}, 'target': {'x': 15, 'y': 1}},],
 	'pluses' : [{'x':4, 'y':1}, {'x':25, 'y':1}]
 }
