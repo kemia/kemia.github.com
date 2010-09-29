@@ -825,6 +825,11 @@ See the COPYING file for details.
 	background-position: -310px;
 }
 
+/* Rotate */
+.tr-rotate {
+	background-position: -328px;
+}
+
 /* Erase */
 .tr-erase {
 	background-position: -126px;
