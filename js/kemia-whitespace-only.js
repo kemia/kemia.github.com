@@ -11132,7 +11132,6 @@ kemia.controller.ReactionEditor.prototype.getModels = function() {
   return this.models
 };
 kemia.controller.ReactionEditor.prototype.dispatchBeforeChange = function() {
-  this.logger.info("dispatchBeforeChange");
   this._serialized = goog.json.serialize(goog.array.map(this.getModels(), function(model) {
     if(model instanceof kemia.model.Reaction) {
       return kemia.io.json.reactionToJson(model)
@@ -11142,8 +11141,7 @@ kemia.controller.ReactionEditor.prototype.dispatchBeforeChange = function() {
       }
     }
   }));
-  this.dispatchEvent(kemia.controller.ReactionEditor.EventType.BEFORECHANGE);
-  this.logger.info("_end_dispatchBeforeChange")
+  this.dispatchEvent(kemia.controller.ReactionEditor.EventType.BEFORECHANGE)
 };
 kemia.controller.ReactionEditor.prototype.invokeShortCircuitingOp_ = function(op, var_args) {
   var plugins = this.indexedPlugins_[op];
@@ -17354,33 +17352,13 @@ kemia.controller.plugins.UndoRedo.prototype.getContentState_ = function(editorOb
   }return serialized
 };
 kemia.controller.plugins.UndoRedo.prototype.updateCurrentState_ = function(editorObj) {
-  this.logger.info("updateCurrentState_  ");
   var serialized = this.getContentState_(editorObj);
   var currentState = this.currentState_;
   if(currentState != serialized) {
     this.addState(serialized)
-  }this.currentState_ = serialized;
-  this.logger.info("_end_updateCurrentState_ ")
-};
-kemia.controller.plugins.UndoRedo.prototype.logStackState = function() {
-  var atom_count = function(state) {
-    return goog.array.reduce(state, function(sum, r) {
-      var mols = goog.array.concat(r.reactants, r.products);
-      return sum + goog.array.reduce(mols, function(ss, m) {
-        return ss + m.atoms.length
-      }, 0)
-    }, 0)
-  };
-  var msg = "    ";
-  msg += " currentState_:" + atom_count(this.currentState_);
-  if(this.undoStack_.length > 0) {
-    msg += " undoStack_:" + " [" + goog.array.map(this.undoStack_, atom_count) + "]"
-  }if(this.redoStack_.length > 0) {
-    msg += " redoStack_:" + " [" + goog.array.map(this.redoStack_, atom_count) + "]"
-  }this.logger.info(msg)
+  }this.currentState_ = serialized
 };
 kemia.controller.plugins.UndoRedo.prototype.addState = function(state) {
-  this.logger.info("addState");
   this.undoStack_.push(state);
   if(this.undoStack_.length > this.maxUndoDepth_) {
     this.undoStack_.shift();
@@ -17390,21 +17368,16 @@ kemia.controller.plugins.UndoRedo.prototype.addState = function(state) {
     if(this.undoStack_.length == 1 || redoLength) {
       this.dispatchStateChange_()
     }
-  }this.logStackState();
-  this.logger.info("_end_addState")
+  }
 };
 kemia.controller.plugins.UndoRedo.prototype.dispatchStateChange_ = function() {
   this.dispatchEvent(kemia.controller.plugins.UndoRedo.EventType.STATE_CHANGE)
 };
 kemia.controller.plugins.UndoRedo.prototype.undo = function() {
-  this.logger.info("undo");
-  this.shiftState_(this.undoStack_, this.redoStack_);
-  this.logger.info("_end_undo")
+  this.shiftState_(this.undoStack_, this.redoStack_)
 };
 kemia.controller.plugins.UndoRedo.prototype.redo = function() {
-  this.logger.info("redo");
-  this.shiftState_(this.redoStack_, this.undoStack_);
-  this.logger.info("_end_redo")
+  this.shiftState_(this.redoStack_, this.undoStack_)
 };
 kemia.controller.plugins.UndoRedo.prototype.hasUndoState = function() {
   return this.undoStack_.length > 0
@@ -17413,7 +17386,6 @@ kemia.controller.plugins.UndoRedo.prototype.hasRedoState = function() {
   return this.redoStack_.length > 0
 };
 kemia.controller.plugins.UndoRedo.prototype.shiftState_ = function(fromStack, toStack) {
-  this.logger.info("shiftState");
   if(fromStack.length) {
     var state = fromStack.pop();
     toStack.push(state);
@@ -17428,15 +17400,12 @@ kemia.controller.plugins.UndoRedo.prototype.shiftState_ = function(fromStack, to
     if(fromStack.length == 0 || toStack.length == 1) {
       this.dispatchStateChange_()
     }
-  }this.logStackState();
-  this.logger.info("_end_shiftState")
+  }
 };
 kemia.controller.plugins.UndoRedo.prototype.enable = function(editorObject) {
   kemia.controller.plugins.UndoRedo.superClass_.enable.call(this, editorObject);
-  this.logger.info("enable");
   this.eventHandler = new goog.events.EventHandler(this);
-  this.eventHandler.listen(editorObject, kemia.controller.ReactionEditor.EventType.BEFORECHANGE, this.handleBeforeChange_);
-  this.logger.info("_end_enable")
+  this.eventHandler.listen(editorObject, kemia.controller.ReactionEditor.EventType.BEFORECHANGE, this.handleBeforeChange_)
 };
 kemia.controller.plugins.UndoRedo.prototype.disable = function(editorObject) {
   editorObject.clearDelayedChange();
@@ -19909,8 +19878,7 @@ goog.require("kemia.controller.plugins.MoleculeEdit");
 goog.require("kemia.controller.plugins.Cleanup");
 goog.require("kemia.controller.TemplateMenuButtonRenderer");
 goog.require("goog.ui.ToolbarSeparator");
-kemia.controller.DefaultToolbar.makeDefaultToolbar = function(elem) {
-  var buttons = [];
+kemia.controller.DefaultToolbar.makeActionButtons = function(buttons) {
   var file_select = kemia.controller.ToolbarFactory.makeSelectButton(kemia.controller.plugins.ClearEditor.COMMAND, "File", "File");
   var file_menu = new goog.ui.Menu;
   var erase_all = new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, undefined, "New"));
@@ -19936,6 +19904,9 @@ kemia.controller.DefaultToolbar.makeDefaultToolbar = function(elem) {
   erase.queryable = true;
   buttons.push(erase);
   buttons.push(new goog.ui.ToolbarSeparator);
+  return buttons
+};
+kemia.controller.DefaultToolbar.makeArrowPlusButtons = function(buttons) {
   var plus_button = kemia.controller.ToolbarFactory.makeToggleButton(kemia.controller.plugins.ArrowPlusEdit.COMMAND.EDIT_PLUS, "Plus", "", goog.getCssName("tr-icon") + " " + goog.getCssName("tr-plus"));
   plus_button.queryable = true;
   buttons.push(plus_button);
@@ -19943,9 +19914,15 @@ kemia.controller.DefaultToolbar.makeDefaultToolbar = function(elem) {
   arrow_button.queryable = true;
   buttons.push(arrow_button);
   buttons.push(new goog.ui.ToolbarSeparator);
+  return buttons
+};
+kemia.controller.DefaultToolbar.makeZoomButtons = function(buttons) {
   buttons.push(kemia.controller.ToolbarFactory.makeButton(kemia.controller.plugins.Zoom.COMMAND.ZOOM_IN, "Zoom In", "", goog.getCssName("tr-icon") + " " + goog.getCssName("tr-zoom-in")));
   buttons.push(kemia.controller.ToolbarFactory.makeButton(kemia.controller.plugins.Zoom.COMMAND.ZOOM_OUT, "Zoom Out", "", goog.getCssName("tr-icon") + " " + goog.getCssName("tr-zoom-out")));
   buttons.push(new goog.ui.ToolbarSeparator);
+  return buttons
+};
+kemia.controller.DefaultToolbar.makeAtomBondButtons = function(buttons) {
   var atom_select = kemia.controller.ToolbarFactory.makeSelectButton(kemia.controller.plugins.AtomEdit.COMMAND, "Atomic Symbol", "Symbol");
   atom_select.queryable = true;
   atom_select.updateFromValue = function(value) {
@@ -19982,6 +19959,19 @@ kemia.controller.DefaultToolbar.makeDefaultToolbar = function(elem) {
   });
   bond_select.setMenu(bond_menu);
   buttons.push(bond_select);
+  return buttons
+};
+kemia.controller.DefaultToolbar.makeDefaultMoleculeToolbar = function(elem) {
+  var buttons = this.makeActionButtons([]);
+  var buttons = this.makeZoomButtons(buttons);
+  var buttons = this.makeAtomBondButtons(buttons);
+  return kemia.controller.DefaultToolbar.makeToolbar(buttons, elem)
+};
+kemia.controller.DefaultToolbar.makeDefaultReactionToolbar = function(elem) {
+  var buttons = this.makeActionButtons([]);
+  var buttons = this.makeArrowPlusButtons(buttons);
+  var buttons = this.makeZoomButtons(buttons);
+  var buttons = this.makeAtomBondButtons(buttons);
   var renderer = undefined;
   var template_select = kemia.controller.ToolbarFactory.makeSelectButton(kemia.controller.plugins.MoleculeEdit.COMMAND, "Template", "Template");
   template_select.queryable = true;
@@ -20215,7 +20205,6 @@ kemia.controller.ToolbarController.prototype.disposeInternal = function() {
   delete this.queryCommands_
 };
 kemia.controller.ToolbarController.prototype.updateToolbar = function(e) {
-  this.logger.info("updateToolbar");
   if(!this.toolbar_.isEnabled() || !this.dispatchEvent(goog.ui.Component.EventType.CHANGE)) {
     return
   }var state;
