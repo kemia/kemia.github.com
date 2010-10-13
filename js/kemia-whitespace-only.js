@@ -11018,6 +11018,295 @@ goog.debug.Console.show = function() {
   alert(goog.debug.Console.instance.logBuffer_)
 };
 // Input 109
+goog.provide("goog.events.KeyNames");
+goog.events.KeyNames = {8:"backspace", 9:"tab", 13:"enter", 16:"shift", 17:"ctrl", 18:"alt", 19:"pause", 20:"caps-lock", 27:"esc", 32:"space", 33:"pg-up", 34:"pg-down", 35:"end", 36:"home", 37:"left", 38:"up", 39:"right", 40:"down", 45:"insert", 46:"delete", 48:"0", 49:"1", 50:"2", 51:"3", 52:"4", 53:"5", 54:"6", 55:"7", 56:"8", 57:"9", 61:"equals", 65:"a", 66:"b", 67:"c", 68:"d", 69:"e", 70:"f", 71:"g", 72:"h", 73:"i", 74:"j", 75:"k", 76:"l", 77:"m", 78:"n", 79:"o", 80:"p", 81:"q", 82:"r", 83:"s", 
+84:"t", 85:"u", 86:"v", 87:"w", 88:"x", 89:"y", 90:"z", 93:"context", 96:"num-0", 97:"num-1", 98:"num-2", 99:"num-3", 100:"num-4", 101:"num-5", 102:"num-6", 103:"num-7", 104:"num-8", 105:"num-9", 106:"num-multiply", 107:"num-plus", 109:"num-minus", 110:"num-period", 111:"num-division", 112:"f1", 113:"f2", 114:"f3", 115:"f4", 116:"f5", 117:"f6", 118:"f7", 119:"f8", 120:"f9", 121:"f10", 122:"f11", 123:"f12", 187:"equals", 188:",", 190:".", 191:"/", 220:"\\", 224:"win"};
+// Input 110
+goog.provide("goog.ui.KeyboardShortcutEvent");
+goog.provide("goog.ui.KeyboardShortcutHandler");
+goog.provide("goog.ui.KeyboardShortcutHandler.EventType");
+goog.require("goog.Timer");
+goog.require("goog.events");
+goog.require("goog.events.Event");
+goog.require("goog.events.EventTarget");
+goog.require("goog.events.EventType");
+goog.require("goog.events.KeyCodes");
+goog.require("goog.events.KeyNames");
+goog.require("goog.object");
+goog.ui.KeyboardShortcutHandler = function(keyTarget) {
+  goog.events.EventTarget.call(this);
+  this.shortcuts_ = {};
+  this.lastKeys_ = {strokes:[], time:0};
+  this.globalKeys_ = goog.object.createSet(goog.ui.KeyboardShortcutHandler.DEFAULT_GLOBAL_KEYS_);
+  this.alwaysPreventDefault_ = true;
+  this.alwaysStopPropagation_ = false;
+  this.allShortcutsAreGlobal_ = false;
+  this.modifierShortcutsAreGlobal_ = true;
+  this.initializeKeyListener(keyTarget)
+};
+goog.inherits(goog.ui.KeyboardShortcutHandler, goog.events.EventTarget);
+goog.ui.KeyboardShortcutHandler.MAX_KEY_SEQUENCE_DELAY = 1500;
+goog.ui.KeyboardShortcutHandler.Modifiers = {NONE:0, SHIFT:1, CTRL:2, ALT:4, META:8};
+goog.ui.KeyboardShortcutHandler.DEFAULT_GLOBAL_KEYS_ = [goog.events.KeyCodes.ESC, goog.events.KeyCodes.F1, goog.events.KeyCodes.F2, goog.events.KeyCodes.F3, goog.events.KeyCodes.F4, goog.events.KeyCodes.F5, goog.events.KeyCodes.F6, goog.events.KeyCodes.F7, goog.events.KeyCodes.F8, goog.events.KeyCodes.F9, goog.events.KeyCodes.F10, goog.events.KeyCodes.F11, goog.events.KeyCodes.F12, goog.events.KeyCodes.PAUSE];
+goog.ui.KeyboardShortcutHandler.EventType = {SHORTCUT_TRIGGERED:"shortcut", SHORTCUT_PREFIX:"shortcut_"};
+goog.ui.KeyboardShortcutHandler.nameToKeyCodeCache_;
+goog.ui.KeyboardShortcutHandler.prototype.keyTarget_;
+goog.ui.KeyboardShortcutHandler.prototype.metaKeyRecentlyReleased_;
+goog.ui.KeyboardShortcutHandler.prototype.isPrintableKey_;
+goog.ui.KeyboardShortcutHandler.getKeyCode = function(name) {
+  if(!goog.ui.KeyboardShortcutHandler.nameToKeyCodeCache_) {
+    var map = {};
+    for(var key in goog.events.KeyNames) {
+      map[goog.events.KeyNames[key]] = key
+    }goog.ui.KeyboardShortcutHandler.nameToKeyCodeCache_ = map
+  }return goog.ui.KeyboardShortcutHandler.nameToKeyCodeCache_[name]
+};
+goog.ui.KeyboardShortcutHandler.prototype.setAlwaysPreventDefault = function(alwaysPreventDefault) {
+  this.alwaysPreventDefault_ = alwaysPreventDefault
+};
+goog.ui.KeyboardShortcutHandler.prototype.getAlwaysPreventDefault = function() {
+  return this.alwaysPreventDefault_
+};
+goog.ui.KeyboardShortcutHandler.prototype.setAlwaysStopPropagation = function(alwaysStopPropagation) {
+  this.alwaysStopPropagation_ = alwaysStopPropagation
+};
+goog.ui.KeyboardShortcutHandler.prototype.getAlwaysStopPropagation = function() {
+  return this.alwaysStopPropagation_
+};
+goog.ui.KeyboardShortcutHandler.prototype.setAllShortcutsAreGlobal = function(allShortcutsGlobal) {
+  this.allShortcutsAreGlobal_ = allShortcutsGlobal
+};
+goog.ui.KeyboardShortcutHandler.prototype.getAllShortcutsAreGlobal = function() {
+  return this.allShortcutsAreGlobal_
+};
+goog.ui.KeyboardShortcutHandler.prototype.setModifierShortcutsAreGlobal = function(modifierShortcutsGlobal) {
+  this.modifierShortcutsAreGlobal_ = modifierShortcutsGlobal
+};
+goog.ui.KeyboardShortcutHandler.prototype.getModifierShortcutsAreGlobal = function() {
+  return this.modifierShortcutsAreGlobal_
+};
+goog.ui.KeyboardShortcutHandler.prototype.registerShortcut = function(identifier, var_args) {
+  goog.ui.KeyboardShortcutHandler.setShortcut_(this.shortcuts_, this.interpretStrokes_(1, arguments), identifier)
+};
+goog.ui.KeyboardShortcutHandler.prototype.unregisterShortcut = function(var_args) {
+  goog.ui.KeyboardShortcutHandler.setShortcut_(this.shortcuts_, this.interpretStrokes_(0, arguments), null)
+};
+goog.ui.KeyboardShortcutHandler.prototype.isShortcutRegistered = function(var_args) {
+  return this.checkShortcut_(this.interpretStrokes_(0, arguments))
+};
+goog.ui.KeyboardShortcutHandler.prototype.interpretStrokes_ = function(initialIndex, args) {
+  var strokes;
+  if(goog.isString(args[initialIndex])) {
+    strokes = goog.ui.KeyboardShortcutHandler.parseStringShortcut(args[initialIndex])
+  }else {
+    var strokesArgs = args, i = initialIndex;
+    if(goog.isArray(args[initialIndex])) {
+      strokesArgs = args[initialIndex];
+      i = 0
+    }strokes = [];
+    for(;i < strokesArgs.length;i += 2) {
+      strokes.push({keyCode:strokesArgs[i], modifiers:strokesArgs[i + 1]})
+    }
+  }return strokes
+};
+goog.ui.KeyboardShortcutHandler.prototype.unregisterAll = function() {
+  this.shortcuts_ = {}
+};
+goog.ui.KeyboardShortcutHandler.prototype.setGlobalKeys = function(keys) {
+  this.globalKeys_ = goog.object.createSet(keys)
+};
+goog.ui.KeyboardShortcutHandler.prototype.getGlobalKeys = function() {
+  return goog.object.getKeys(this.globalKeys_)
+};
+goog.ui.KeyboardShortcutHandler.prototype.disposeInternal = function() {
+  goog.ui.KeyboardShortcutHandler.superClass_.disposeInternal.call(this);
+  this.unregisterAll();
+  this.clearKeyListener()
+};
+goog.ui.KeyboardShortcutHandler.prototype.getEventType = function(identifier) {
+  return goog.ui.KeyboardShortcutHandler.EventType.SHORTCUT_PREFIX + identifier
+};
+goog.ui.KeyboardShortcutHandler.parseStringShortcut = function(s) {
+  s = s.replace(/[ +]*\+[ +]*/g, "+").replace(/[ ]+/g, " ").toLowerCase();
+  var groups = s.split(" ");
+  var strokes = [];
+  for(var group, i = 0;group = groups[i];i++) {
+    var keys = group.split("+");
+    var keyCode, modifiers = goog.ui.KeyboardShortcutHandler.Modifiers.NONE;
+    for(var key, j = 0;key = keys[j];j++) {
+      switch(key) {
+        case "shift":
+          modifiers |= goog.ui.KeyboardShortcutHandler.Modifiers.SHIFT;
+          continue;
+        case "ctrl":
+          modifiers |= goog.ui.KeyboardShortcutHandler.Modifiers.CTRL;
+          continue;
+        case "alt":
+          modifiers |= goog.ui.KeyboardShortcutHandler.Modifiers.ALT;
+          continue;
+        case "meta":
+          modifiers |= goog.ui.KeyboardShortcutHandler.Modifiers.META;
+          continue
+      }
+      keyCode = goog.ui.KeyboardShortcutHandler.getKeyCode(key);
+      break
+    }strokes.push({keyCode:keyCode, modifiers:modifiers})
+  }return strokes
+};
+goog.ui.KeyboardShortcutHandler.prototype.initializeKeyListener = function(keyTarget) {
+  this.keyTarget_ = keyTarget;
+  goog.events.listen(this.keyTarget_, goog.events.EventType.KEYDOWN, this.handleKeyDown_, false, this);
+  if(goog.userAgent.MAC && goog.userAgent.GECKO && goog.userAgent.isVersion("1.8")) {
+    goog.events.listen(this.keyTarget_, goog.events.EventType.KEYUP, this.handleMacGeckoKeyUp_, false, this)
+  }if(goog.userAgent.WINDOWS && !goog.userAgent.GECKO) {
+    goog.events.listen(this.keyTarget_, goog.events.EventType.KEYPRESS, this.handleWindowsKeyPress_, false, this);
+    goog.events.listen(this.keyTarget_, goog.events.EventType.KEYUP, this.handleWindowsKeyUp_, false, this)
+  }
+};
+goog.ui.KeyboardShortcutHandler.prototype.handleMacGeckoKeyUp_ = function(e) {
+  if(e.keyCode == goog.events.KeyCodes.MAC_FF_META) {
+    this.metaKeyRecentlyReleased_ = true;
+    goog.Timer.callOnce(function() {
+      this.metaKeyRecentlyReleased_ = false
+    }, 400, this);
+    return
+  }var metaKey = e.metaKey || this.metaKeyRecentlyReleased_;
+  if((e.keyCode == goog.events.KeyCodes.C || e.keyCode == goog.events.KeyCodes.X || e.keyCode == goog.events.KeyCodes.V) && metaKey) {
+    e.metaKey = metaKey;
+    this.handleKeyDown_(e)
+  }
+};
+goog.ui.KeyboardShortcutHandler.prototype.isPossiblePrintableKey_ = function(e) {
+  return goog.userAgent.WINDOWS && !goog.userAgent.GECKO && e.ctrlKey && e.altKey && !e.shiftKey
+};
+goog.ui.KeyboardShortcutHandler.prototype.handleWindowsKeyPress_ = function(e) {
+  if(e.keyCode > 32 && this.isPossiblePrintableKey_(e)) {
+    this.isPrintableKey_ = true
+  }
+};
+goog.ui.KeyboardShortcutHandler.prototype.handleWindowsKeyUp_ = function(e) {
+  if(!this.isPrintableKey_ && this.isPossiblePrintableKey_(e)) {
+    this.handleKeyDown_(e)
+  }
+};
+goog.ui.KeyboardShortcutHandler.prototype.clearKeyListener = function() {
+  goog.events.unlisten(this.keyTarget_, goog.events.EventType.KEYDOWN, this.handleKeyDown_, false, this);
+  if(goog.userAgent.MAC && goog.userAgent.GECKO && goog.userAgent.isVersion("1.8")) {
+    goog.events.unlisten(this.keyTarget_, goog.events.EventType.KEYUP, this.handleMacGeckoKeyUp_, false, this)
+  }if(goog.userAgent.WINDOWS && !goog.userAgent.GECKO) {
+    goog.events.unlisten(this.keyTarget_, goog.events.EventType.KEYPRESS, this.handleWindowsKeyPress_, false, this);
+    goog.events.unlisten(this.keyTarget_, goog.events.EventType.KEYUP, this.handleWindowsKeyUp_, false, this)
+  }this.keyTarget_ = null
+};
+goog.ui.KeyboardShortcutHandler.setShortcut_ = function(parent, strokes, identifier) {
+  var stroke = strokes.shift();
+  var key = goog.ui.KeyboardShortcutHandler.makeKey_(stroke.keyCode, stroke.modifiers);
+  var node = parent[key];
+  if(node && identifier && (strokes.length == 0 || goog.isString(node))) {
+    throw Error("Keyboard shortcut conflicts with existing shortcut");
+  }if(strokes.length) {
+    if(!node) {
+      node = parent[key] = {}
+    }goog.ui.KeyboardShortcutHandler.setShortcut_(node, strokes, identifier)
+  }else {
+    parent[key] = identifier
+  }
+};
+goog.ui.KeyboardShortcutHandler.prototype.getShortcut_ = function(strokes, opt_index, opt_list) {
+  var list = opt_list || this.shortcuts_;
+  var index = opt_index || 0;
+  var stroke = strokes[index];
+  var node = list[stroke];
+  if(node && !goog.isString(node) && strokes.length - index > 1) {
+    return this.getShortcut_(strokes, index + 1, node)
+  }return node
+};
+goog.ui.KeyboardShortcutHandler.prototype.checkShortcut_ = function(strokes) {
+  var node = this.shortcuts_;
+  while(strokes.length > 0 && node) {
+    var stroke = strokes.shift();
+    var key = goog.ui.KeyboardShortcutHandler.makeKey_(stroke.keyCode, stroke.modifiers);
+    node = node[key];
+    if(goog.isString(node)) {
+      return true
+    }
+  }return false
+};
+goog.ui.KeyboardShortcutHandler.makeKey_ = function(keyCode, modifiers) {
+  return keyCode & 255 | modifiers << 8
+};
+goog.ui.KeyboardShortcutHandler.prototype.handleKeyDown_ = function(event) {
+  if(!this.isValidShortcut_(event)) {
+    return
+  }if(event.type == "keydown" && this.isPossiblePrintableKey_(event)) {
+    this.isPrintableKey_ = false;
+    return
+  }var modifiers = (event.shiftKey ? goog.ui.KeyboardShortcutHandler.Modifiers.SHIFT : 0) | (event.ctrlKey ? goog.ui.KeyboardShortcutHandler.Modifiers.CTRL : 0) | (event.altKey ? goog.ui.KeyboardShortcutHandler.Modifiers.ALT : 0) | (event.metaKey ? goog.ui.KeyboardShortcutHandler.Modifiers.META : 0);
+  var stroke = goog.ui.KeyboardShortcutHandler.makeKey_(event.keyCode, modifiers);
+  var node, shortcut;
+  var now = goog.now();
+  if(this.lastKeys_.strokes.length && now - this.lastKeys_.time <= goog.ui.KeyboardShortcutHandler.MAX_KEY_SEQUENCE_DELAY) {
+    node = this.getShortcut_(this.lastKeys_.strokes)
+  }else {
+    this.lastKeys_.strokes.length = 0
+  }node = node ? node[stroke] : this.shortcuts_[stroke];
+  if(!node) {
+    node = this.shortcuts_[stroke];
+    this.lastKeys_.strokes = []
+  }if(node && goog.isString(node)) {
+    shortcut = node
+  }else {
+    if(node) {
+      this.lastKeys_.strokes.push(stroke);
+      this.lastKeys_.time = now;
+      if(goog.userAgent.GECKO) {
+        event.preventDefault()
+      }
+    }else {
+      this.lastKeys_.strokes.length = 0
+    }
+  }if(shortcut) {
+    if(this.alwaysPreventDefault_) {
+      event.preventDefault()
+    }if(this.alwaysStopPropagation_) {
+      event.stopPropagation()
+    }var types = goog.ui.KeyboardShortcutHandler.EventType;
+    var triggerEvent = new goog.ui.KeyboardShortcutEvent(types.SHORTCUT_TRIGGERED, shortcut, event.target);
+    var retVal = this.dispatchEvent(triggerEvent);
+    var prefixEvent = new goog.ui.KeyboardShortcutEvent(types.SHORTCUT_PREFIX + shortcut, shortcut, event.target);
+    retVal &= this.dispatchEvent(prefixEvent);
+    if(!retVal) {
+      event.preventDefault()
+    }this.lastKeys_.strokes.length = 0
+  }
+};
+goog.ui.KeyboardShortcutHandler.prototype.isValidShortcut_ = function(event) {
+  var keyCode = event.keyCode;
+  if(keyCode == goog.events.KeyCodes.SHIFT || keyCode == goog.events.KeyCodes.CTRL || keyCode == goog.events.KeyCodes.ALT) {
+    return false
+  }var el = event.target;
+  var isFormElement = el.tagName == "TEXTAREA" || el.tagName == "INPUT" || el.tagName == "BUTTON" || el.tagName == "SELECT";
+  var isContentEditable = !isFormElement && (el.isContentEditable || el.ownerDocument && el.ownerDocument.designMode == "on");
+  if(!isFormElement && !isContentEditable) {
+    return true
+  }if(this.globalKeys_[keyCode] || this.allShortcutsAreGlobal_) {
+    return true
+  }if(isContentEditable) {
+    return false
+  }if(this.modifierShortcutsAreGlobal_ && (event.altKey || event.ctrlKey || event.metaKey)) {
+    return true
+  }if(el.tagName == "INPUT" && (el.type == "text" || el.type == "password")) {
+    return keyCode == goog.events.KeyCodes.ENTER
+  }if(el.tagName == "INPUT" || el.tagName == "BUTTON") {
+    return keyCode != goog.events.KeyCodes.SPACE
+  }return false
+};
+goog.ui.KeyboardShortcutEvent = function(type, identifier, target) {
+  goog.events.Event.call(this, type, target);
+  this.identifier = identifier
+};
+goog.inherits(goog.ui.KeyboardShortcutEvent, goog.events.Event);
+// Input 111
 /*
  Copyright 2010 Paul Novak (paul@wingu.com)
 
@@ -11047,6 +11336,7 @@ goog.require("kemia.controller.Plugin");
 goog.require("kemia.model.NeighborList");
 goog.require("goog.ui.Prompt");
 goog.require("goog.debug.Console");
+goog.require("goog.ui.KeyboardShortcutHandler");
 kemia.controller.ReactionEditor = function(element, opt_config) {
   goog.events.EventTarget.call(this);
   this.originalElement = element;
@@ -11066,6 +11356,7 @@ kemia.controller.ReactionEditor = function(element, opt_config) {
   this.isModified_ = false;
   this.isEverModified_ = false;
   this.eventRegister = new goog.events.EventHandler(this);
+  this.shortcutHandler = new goog.ui.KeyboardShortcutHandler(document);
   this.wrappers_ = [];
   this.handleEditorLoad();
   this.loadState_ = kemia.controller.ReactionEditor.LoadState_.EDITABLE;
@@ -11078,6 +11369,15 @@ goog.inherits(kemia.controller.ReactionEditor, goog.events.EventTarget);
 goog.exportSymbol("kemia.controller.ReactionEditor", kemia.controller.ReactionEditor);
 kemia.controller.ReactionEditor.setActiveEditorId = function(editorId) {
   kemia.controller.ReactionEditor.activeEditorId_ = editorId
+};
+kemia.controller.ReactionEditor.prototype.clearSelected = function() {
+  this.selected.length = 0
+};
+kemia.controller.ReactionEditor.prototype.getSelected = function() {
+  return this.selected
+};
+kemia.controller.ReactionEditor.prototype.addSelected = function(obj) {
+  this.selected.push(obj)
 };
 kemia.controller.ReactionEditor.prototype.getEditableDomHelper = function() {
   return this.editableDomHelper
@@ -11429,12 +11729,17 @@ kemia.controller.ReactionEditor.prototype.addListener = function(type, listener,
   this.eventRegister.listen(elem, type, listener, opt_capture, opt_handler)
 };
 kemia.controller.ReactionEditor.prototype.setupChangeListeners_ = function() {
+  this.addListener(goog.events.EventType.KEYDOWN, this.handleKeyDown_);
+  this.addListener(goog.events.EventType.KEYPRESS, this.handleKeyPress_);
+  this.addListener(goog.events.EventType.KEYUP, this.handleKeyUp_);
   this.addListener(goog.events.EventType.MOUSEDOWN, this.handleMouseDown_);
   this.addListener(goog.events.EventType.MOUSEMOVE, this.handleMouseMove_);
   this.addListener(goog.events.EventType.MOUSEUP, this.handleMouseUp_);
-  this.addListener("paste", this.handlePaste_)
+  this.addListener("paste", this.handlePaste_);
+  goog.events.listen(this.shortcutHandler, goog.ui.KeyboardShortcutHandler.EventType.SHORTCUT_TRIGGERED, this.handleKeyboardShortcut_, undefined, this)
 };
 kemia.controller.ReactionEditor.prototype.registerShortcut = function(id, key) {
+  this.shortcutHandler.registerShortcut(id, key)
 };
 kemia.controller.ReactionEditor.prototype.installStyles = function() {
   if(this.cssStyles && this.shouldLoadAsynchronously()) {
@@ -11442,7 +11747,7 @@ kemia.controller.ReactionEditor.prototype.installStyles = function() {
   }
 };
 kemia.controller.ReactionEditor.defaultConfig = {background:{color:"#F0FFF0"}, margin:{left:1, right:1, top:1, bottom:1}};
-// Input 110
+// Input 112
 goog.provide("goog.string.StringBuffer");
 goog.require("goog.userAgent.jscript");
 goog.string.StringBuffer = function(opt_a1, var_args) {
@@ -11496,10 +11801,10 @@ goog.string.StringBuffer.prototype.toString = function() {
     return this.buffer_
   }
 };
-// Input 111
+// Input 113
 goog.provide("goog.ui.ControlContent");
 goog.ui.ControlContent;
-// Input 112
+// Input 114
 goog.provide("goog.events.KeyEvent");
 goog.provide("goog.events.KeyHandler");
 goog.provide("goog.events.KeyHandler.EventType");
@@ -11627,7 +11932,7 @@ goog.events.KeyEvent = function(keyCode, charCode, repeat, browserEvent) {
   this.repeat = repeat
 };
 goog.inherits(goog.events.KeyEvent, goog.events.BrowserEvent);
-// Input 113
+// Input 115
 goog.provide("goog.ui.ControlRenderer");
 goog.require("goog.array");
 goog.require("goog.dom");
@@ -11888,7 +12193,7 @@ goog.ui.ControlRenderer.prototype.createStateByClassMap_ = function() {
     this.createClassByStateMap_()
   }this.stateByClass_ = goog.object.transpose(this.classByState_)
 };
-// Input 114
+// Input 116
 goog.provide("goog.ui.registry");
 goog.require("goog.dom.classes");
 goog.ui.registry.getDefaultRenderer = function(componentCtor) {
@@ -11936,7 +12241,7 @@ goog.ui.registry.reset = function() {
 };
 goog.ui.registry.defaultRenderers_ = {};
 goog.ui.registry.decoratorFunctions_ = {};
-// Input 115
+// Input 117
 goog.provide("goog.ui.decorate");
 goog.require("goog.ui.registry");
 goog.ui.decorate = function(element) {
@@ -11945,7 +12250,7 @@ goog.ui.decorate = function(element) {
     decorator.decorate(element)
   }return decorator
 };
-// Input 116
+// Input 118
 goog.provide("goog.ui.Control");
 goog.require("goog.array");
 goog.require("goog.dom");
@@ -12356,7 +12661,7 @@ goog.ui.registry.setDefaultRenderer(goog.ui.Control, goog.ui.ControlRenderer);
 goog.ui.registry.setDecoratorByClassName(goog.ui.ControlRenderer.CSS_CLASS, function() {
   return new goog.ui.Control(null)
 });
-// Input 117
+// Input 119
 goog.provide("goog.ui.MenuSeparatorRenderer");
 goog.require("goog.dom");
 goog.require("goog.dom.classes");
@@ -12386,7 +12691,7 @@ goog.ui.MenuSeparatorRenderer.prototype.setContent = function(separator, content
 goog.ui.MenuSeparatorRenderer.prototype.getCssClass = function() {
   return goog.ui.MenuSeparatorRenderer.CSS_CLASS
 };
-// Input 118
+// Input 120
 goog.provide("goog.ui.Separator");
 goog.require("goog.dom.a11y");
 goog.require("goog.ui.Component.State");
@@ -12409,7 +12714,7 @@ goog.ui.Separator.prototype.enterDocument = function() {
 goog.ui.registry.setDecoratorByClassName(goog.ui.MenuSeparatorRenderer.CSS_CLASS, function() {
   return new goog.ui.Separator
 });
-// Input 119
+// Input 121
 goog.provide("goog.ui.ContainerRenderer");
 goog.require("goog.array");
 goog.require("goog.dom");
@@ -12534,7 +12839,7 @@ goog.ui.ContainerRenderer.prototype.getClassNames = function(container) {
 goog.ui.ContainerRenderer.prototype.getDefaultOrientation = function() {
   return goog.ui.Container.Orientation.VERTICAL
 };
-// Input 120
+// Input 122
 goog.provide("goog.ui.Container");
 goog.provide("goog.ui.Container.EventType");
 goog.provide("goog.ui.Container.Orientation");
@@ -13008,7 +13313,7 @@ goog.ui.Container.prototype.isMouseButtonPressed = function() {
 goog.ui.Container.prototype.setMouseButtonPressed = function(pressed) {
   this.mouseButtonPressed_ = pressed
 };
-// Input 121
+// Input 123
 goog.provide("goog.ui.MenuItemRenderer");
 goog.require("goog.dom");
 goog.require("goog.dom.a11y");
@@ -13136,7 +13441,7 @@ goog.ui.MenuItemRenderer.prototype.getStateFromClass = function(className) {
 goog.ui.MenuItemRenderer.prototype.getCssClass = function() {
   return goog.ui.MenuItemRenderer.CSS_CLASS
 };
-// Input 122
+// Input 124
 goog.provide("goog.ui.MenuItem");
 goog.require("goog.ui.Component.State");
 goog.require("goog.ui.Control");
@@ -13179,7 +13484,7 @@ goog.ui.MenuItem.prototype.getCaption = function() {
 goog.ui.registry.setDecoratorByClassName(goog.ui.MenuItemRenderer.CSS_CLASS, function() {
   return new goog.ui.MenuItem(null)
 });
-// Input 123
+// Input 125
 goog.provide("goog.ui.Option");
 goog.require("goog.ui.Component.EventType");
 goog.require("goog.ui.ControlContent");
@@ -13196,10 +13501,10 @@ goog.ui.Option.prototype.performActionInternal = function(e) {
 goog.ui.registry.setDecoratorByClassName(goog.getCssName("goog-option"), function() {
   return new goog.ui.Option(null)
 });
-// Input 124
+// Input 126
 goog.provide("goog.ui.INLINE_BLOCK_CLASSNAME");
 goog.ui.INLINE_BLOCK_CLASSNAME = goog.getCssName("goog-inline-block");
-// Input 125
+// Input 127
 goog.provide("goog.ui.ToolbarSeparatorRenderer");
 goog.require("goog.dom.classes");
 goog.require("goog.ui.INLINE_BLOCK_CLASSNAME");
@@ -13221,7 +13526,7 @@ goog.ui.ToolbarSeparatorRenderer.prototype.decorate = function(separator, elemen
 goog.ui.ToolbarSeparatorRenderer.prototype.getCssClass = function() {
   return goog.ui.ToolbarSeparatorRenderer.CSS_CLASS
 };
-// Input 126
+// Input 128
 goog.provide("goog.ui.ToolbarRenderer");
 goog.require("goog.dom.a11y.Role");
 goog.require("goog.ui.Container.Orientation");
@@ -13246,7 +13551,7 @@ goog.ui.ToolbarRenderer.prototype.getCssClass = function() {
 goog.ui.ToolbarRenderer.prototype.getDefaultOrientation = function() {
   return goog.ui.Container.Orientation.HORIZONTAL
 };
-// Input 127
+// Input 129
 goog.provide("goog.ui.Toolbar");
 goog.require("goog.ui.Container");
 goog.require("goog.ui.ToolbarRenderer");
@@ -13254,10 +13559,10 @@ goog.ui.Toolbar = function(opt_renderer, opt_orientation, opt_domHelper) {
   goog.ui.Container.call(this, opt_orientation, opt_renderer || goog.ui.ToolbarRenderer.getInstance(), opt_domHelper)
 };
 goog.inherits(goog.ui.Toolbar, goog.ui.Container);
-// Input 128
+// Input 130
 goog.provide("goog.ui.ButtonSide");
 goog.ui.ButtonSide = {NONE:0, START:1, END:2, BOTH:3};
-// Input 129
+// Input 131
 goog.provide("goog.ui.ButtonRenderer");
 goog.require("goog.dom.a11y");
 goog.require("goog.dom.a11y.Role");
@@ -13323,7 +13628,7 @@ goog.ui.ButtonRenderer.prototype.setCollapsed = function(button, sides) {
 goog.ui.ButtonRenderer.prototype.getCssClass = function() {
   return goog.ui.ButtonRenderer.CSS_CLASS
 };
-// Input 130
+// Input 132
 goog.provide("goog.ui.NativeButtonRenderer");
 goog.require("goog.dom.classes");
 goog.require("goog.events.EventType");
@@ -13380,7 +13685,7 @@ goog.ui.NativeButtonRenderer.prototype.setUpNativeButton_ = function(button) {
   button.setAutoStates(goog.ui.Component.State.ALL, false);
   button.setSupportedState(goog.ui.Component.State.FOCUSED, false)
 };
-// Input 131
+// Input 133
 goog.provide("goog.ui.Button");
 goog.provide("goog.ui.Button.Side");
 goog.require("goog.events.KeyCodes");
@@ -13441,7 +13746,7 @@ goog.ui.Button.prototype.handleKeyEventInternal = function(e) {
 goog.ui.registry.setDecoratorByClassName(goog.ui.ButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.Button(null)
 });
-// Input 132
+// Input 134
 goog.provide("goog.ui.CustomButtonRenderer");
 goog.require("goog.dom");
 goog.require("goog.dom.classes");
@@ -13508,7 +13813,7 @@ goog.ui.CustomButtonRenderer.trimTextNodes_ = function(element, fromStart) {
     }
   }
 };
-// Input 133
+// Input 135
 goog.provide("goog.ui.ToolbarButtonRenderer");
 goog.require("goog.ui.CustomButtonRenderer");
 goog.ui.ToolbarButtonRenderer = function() {
@@ -13520,7 +13825,7 @@ goog.ui.ToolbarButtonRenderer.CSS_CLASS = goog.getCssName("goog-toolbar-button")
 goog.ui.ToolbarButtonRenderer.prototype.getCssClass = function() {
   return goog.ui.ToolbarButtonRenderer.CSS_CLASS
 };
-// Input 134
+// Input 136
 goog.provide("goog.ui.ToolbarButton");
 goog.require("goog.ui.Button");
 goog.require("goog.ui.ControlContent");
@@ -13533,7 +13838,7 @@ goog.inherits(goog.ui.ToolbarButton, goog.ui.Button);
 goog.ui.registry.setDecoratorByClassName(goog.ui.ToolbarButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.ToolbarButton(null)
 });
-// Input 135
+// Input 137
 goog.provide("goog.color.names");
 goog.color.names = {aliceblue:"#f0f8ff", antiquewhite:"#faebd7", aqua:"#00ffff", aquamarine:"#7fffd4", azure:"#f0ffff", beige:"#f5f5dc", bisque:"#ffe4c4", black:"#000000", blanchedalmond:"#ffebcd", blue:"#0000ff", blueviolet:"#8a2be2", brown:"#a52a2a", burlywood:"#deb887", cadetblue:"#5f9ea0", chartreuse:"#7fff00", chocolate:"#d2691e", coral:"#ff7f50", cornflowerblue:"#6495ed", cornsilk:"#fff8dc", crimson:"#dc143c", cyan:"#00ffff", darkblue:"#00008b", darkcyan:"#008b8b", darkgoldenrod:"#b8860b", 
 darkgray:"#a9a9a9", darkgreen:"#006400", darkgrey:"#a9a9a9", darkkhaki:"#bdb76b", darkmagenta:"#8b008b", darkolivegreen:"#556b2f", darkorange:"#ff8c00", darkorchid:"#9932cc", darkred:"#8b0000", darksalmon:"#e9967a", darkseagreen:"#8fbc8f", darkslateblue:"#483d8b", darkslategray:"#2f4f4f", darkslategrey:"#2f4f4f", darkturquoise:"#00ced1", darkviolet:"#9400d3", deeppink:"#ff1493", deepskyblue:"#00bfff", dimgray:"#696969", dimgrey:"#696969", dodgerblue:"#1e90ff", firebrick:"#b22222", floralwhite:"#fffaf0", 
@@ -13542,7 +13847,7 @@ lightgreen:"#90ee90", lightgrey:"#d3d3d3", lightpink:"#ffb6c1", lightsalmon:"#ff
 mediumturquoise:"#48d1cc", mediumvioletred:"#c71585", midnightblue:"#191970", mintcream:"#f5fffa", mistyrose:"#ffe4e1", moccasin:"#ffe4b5", navajowhite:"#ffdead", navy:"#000080", oldlace:"#fdf5e6", olive:"#808000", olivedrab:"#6b8e23", orange:"#ffa500", orangered:"#ff4500", orchid:"#da70d6", palegoldenrod:"#eee8aa", palegreen:"#98fb98", paleturquoise:"#afeeee", palevioletred:"#d87093", papayawhip:"#ffefd5", peachpuff:"#ffdab9", peru:"#cd853f", pink:"#ffc0cb", plum:"#dda0dd", powderblue:"#b0e0e6", 
 purple:"#800080", red:"#ff0000", rosybrown:"#bc8f8f", royalblue:"#4169e1", saddlebrown:"#8b4513", salmon:"#fa8072", sandybrown:"#f4a460", seagreen:"#2e8b57", seashell:"#fff5ee", sienna:"#a0522d", silver:"#c0c0c0", skyblue:"#87ceeb", slateblue:"#6a5acd", slategray:"#708090", slategrey:"#708090", snow:"#fffafa", springgreen:"#00ff7f", steelblue:"#4682b4", tan:"#d2b48c", teal:"#008080", thistle:"#d8bfd8", tomato:"#ff6347", turquoise:"#40e0d0", violet:"#ee82ee", wheat:"#f5deb3", white:"#ffffff", whitesmoke:"#f5f5f5", 
 yellow:"#ffff00", yellowgreen:"#9acd32"};
-// Input 136
+// Input 138
 goog.provide("goog.color");
 goog.require("goog.color.names");
 goog.require("goog.math");
@@ -13859,7 +14164,7 @@ goog.color.yiqBrightnessDiff_ = function(rgb1, rgb2) {
 goog.color.colorDiff_ = function(rgb1, rgb2) {
   return Math.abs(rgb1[0] - rgb2[0]) + Math.abs(rgb1[1] - rgb2[1]) + Math.abs(rgb1[2] - rgb2[2])
 };
-// Input 137
+// Input 139
 goog.provide("goog.ui.MenuHeaderRenderer");
 goog.require("goog.dom");
 goog.require("goog.dom.classes");
@@ -13873,7 +14178,7 @@ goog.ui.MenuHeaderRenderer.CSS_CLASS = goog.getCssName("goog-menuheader");
 goog.ui.MenuHeaderRenderer.prototype.getCssClass = function() {
   return goog.ui.MenuHeaderRenderer.CSS_CLASS
 };
-// Input 138
+// Input 140
 goog.provide("goog.ui.MenuHeader");
 goog.require("goog.ui.Component.State");
 goog.require("goog.ui.Control");
@@ -13891,7 +14196,7 @@ goog.inherits(goog.ui.MenuHeader, goog.ui.Control);
 goog.ui.registry.setDecoratorByClassName(goog.ui.MenuHeaderRenderer.CSS_CLASS, function() {
   return new goog.ui.MenuHeader(null)
 });
-// Input 139
+// Input 141
 goog.provide("goog.ui.MenuRenderer");
 goog.require("goog.dom");
 goog.require("goog.dom.a11y");
@@ -13925,7 +14230,7 @@ goog.ui.MenuRenderer.prototype.initializeDom = function(container) {
   var element = container.getElement();
   goog.dom.a11y.setState(element, goog.dom.a11y.State.HASPOPUP, "true")
 };
-// Input 140
+// Input 142
 goog.provide("goog.ui.MenuSeparator");
 goog.require("goog.ui.MenuSeparatorRenderer");
 goog.require("goog.ui.Separator");
@@ -13937,7 +14242,7 @@ goog.inherits(goog.ui.MenuSeparator, goog.ui.Separator);
 goog.ui.registry.setDecoratorByClassName(goog.ui.MenuSeparatorRenderer.CSS_CLASS, function() {
   return new goog.ui.Separator
 });
-// Input 141
+// Input 143
 goog.provide("goog.ui.Menu");
 goog.provide("goog.ui.Menu.EventType");
 goog.require("goog.string");
@@ -14069,7 +14374,7 @@ goog.ui.Menu.prototype.decorateContent = function(element) {
     renderer.decorateChildren(this, el)
   }
 };
-// Input 142
+// Input 144
 goog.provide("goog.ui.MenuButtonRenderer");
 goog.require("goog.dom");
 goog.require("goog.style");
@@ -14123,7 +14428,7 @@ goog.ui.MenuButtonRenderer.prototype.createDropdown = function(dom) {
 goog.ui.MenuButtonRenderer.prototype.getCssClass = function() {
   return goog.ui.MenuButtonRenderer.CSS_CLASS
 };
-// Input 143
+// Input 145
 goog.provide("goog.ui.ColorMenuButtonRenderer");
 goog.require("goog.color");
 goog.require("goog.dom.classes");
@@ -14162,7 +14467,7 @@ goog.ui.ColorMenuButtonRenderer.prototype.initializeDom = function(button) {
   goog.dom.classes.add(button.getElement(), goog.ui.ColorMenuButtonRenderer.CSS_CLASS);
   goog.ui.ColorMenuButtonRenderer.superClass_.initializeDom.call(this, button)
 };
-// Input 144
+// Input 146
 goog.provide("goog.ui.PaletteRenderer");
 goog.require("goog.array");
 goog.require("goog.dom");
@@ -14277,7 +14582,7 @@ goog.ui.PaletteRenderer.prototype.selectCell = function(palette, node, select) {
 goog.ui.PaletteRenderer.prototype.getCssClass = function() {
   return goog.ui.PaletteRenderer.CSS_CLASS
 };
-// Input 145
+// Input 147
 goog.provide("goog.ui.SelectionModel");
 goog.require("goog.array");
 goog.require("goog.events.EventTarget");
@@ -14375,7 +14680,7 @@ goog.ui.SelectionModel.prototype.selectItem_ = function(item, select) {
     }
   }
 };
-// Input 146
+// Input 148
 goog.provide("goog.ui.Palette");
 goog.require("goog.array");
 goog.require("goog.dom");
@@ -14577,7 +14882,7 @@ goog.ui.Palette.prototype.adjustSize_ = function() {
     this.size_ = new goog.math.Size(0, 0)
   }
 };
-// Input 147
+// Input 149
 goog.provide("goog.ui.ColorPalette");
 goog.require("goog.array");
 goog.require("goog.color");
@@ -14632,7 +14937,7 @@ goog.ui.ColorPalette.parseColor_ = function(color) {
     }
   }return null
 };
-// Input 148
+// Input 150
 goog.provide("goog.positioning");
 goog.provide("goog.positioning.Corner");
 goog.provide("goog.positioning.CornerBit");
@@ -14757,7 +15062,7 @@ goog.positioning.flipCornerVertical = function(corner) {
 goog.positioning.flipCorner = function(corner) {
   return corner ^ goog.positioning.CornerBit.BOTTOM ^ goog.positioning.CornerBit.RIGHT
 };
-// Input 149
+// Input 151
 goog.provide("goog.positioning.AbstractPosition");
 goog.require("goog.math.Box");
 goog.require("goog.math.Size");
@@ -14766,7 +15071,7 @@ goog.positioning.AbstractPosition = function() {
 };
 goog.positioning.AbstractPosition.prototype.reposition = function(movableElement, corner, opt_margin, opt_preferredSize) {
 };
-// Input 150
+// Input 152
 goog.provide("goog.positioning.AnchoredPosition");
 goog.require("goog.math.Box");
 goog.require("goog.positioning");
@@ -14779,7 +15084,7 @@ goog.inherits(goog.positioning.AnchoredPosition, goog.positioning.AbstractPositi
 goog.positioning.AnchoredPosition.prototype.reposition = function(movableElement, movableCorner, opt_margin, opt_preferredSize) {
   goog.positioning.positionAtAnchor(this.element, this.corner, movableElement, movableCorner, undefined, opt_margin)
 };
-// Input 151
+// Input 153
 goog.provide("goog.positioning.AnchoredViewportPosition");
 goog.require("goog.math.Box");
 goog.require("goog.positioning");
@@ -14813,7 +15118,7 @@ goog.positioning.AnchoredViewportPosition.prototype.reposition = function(movabl
     }
   }
 };
-// Input 152
+// Input 154
 goog.provide("goog.positioning.MenuAnchoredPosition");
 goog.require("goog.math.Box");
 goog.require("goog.math.Size");
@@ -14833,7 +15138,7 @@ goog.positioning.MenuAnchoredPosition.prototype.reposition = function(movableEle
     goog.positioning.MenuAnchoredPosition.superClass_.reposition.call(this, movableElement, movableCorner, opt_margin, opt_preferredSize)
   }
 };
-// Input 153
+// Input 155
 goog.provide("goog.ui.MenuButton");
 goog.require("goog.Timer");
 goog.require("goog.dom");
@@ -15129,7 +15434,7 @@ goog.ui.MenuButton.prototype.attachPopupListeners_ = function(attach) {
 goog.ui.registry.setDecoratorByClassName(goog.ui.MenuButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.MenuButton(null)
 });
-// Input 154
+// Input 156
 goog.provide("goog.ui.ColorMenuButton");
 goog.require("goog.array");
 goog.require("goog.object");
@@ -15193,7 +15498,7 @@ goog.ui.ColorMenuButton.prototype.setOpen = function(open) {
 goog.ui.registry.setDecoratorByClassName(goog.ui.ColorMenuButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.ColorMenuButton(null)
 });
-// Input 155
+// Input 157
 goog.provide("goog.ui.ToolbarMenuButtonRenderer");
 goog.require("goog.ui.MenuButtonRenderer");
 goog.ui.ToolbarMenuButtonRenderer = function() {
@@ -15205,7 +15510,7 @@ goog.ui.ToolbarMenuButtonRenderer.CSS_CLASS = goog.getCssName("goog-toolbar-menu
 goog.ui.ToolbarMenuButtonRenderer.prototype.getCssClass = function() {
   return goog.ui.ToolbarMenuButtonRenderer.CSS_CLASS
 };
-// Input 156
+// Input 158
 goog.provide("goog.ui.ToolbarColorMenuButtonRenderer");
 goog.require("goog.dom.classes");
 goog.require("goog.ui.ColorMenuButtonRenderer");
@@ -15230,7 +15535,7 @@ goog.ui.ToolbarColorMenuButtonRenderer.prototype.initializeDom = function(button
   goog.dom.classes.add(button.getElement(), goog.getCssName("goog-toolbar-color-menu-button"));
   goog.ui.ToolbarColorMenuButtonRenderer.superClass_.initializeDom.call(this, button)
 };
-// Input 157
+// Input 159
 goog.provide("goog.ui.ToolbarColorMenuButton");
 goog.require("goog.ui.ColorMenuButton");
 goog.require("goog.ui.ControlContent");
@@ -15243,7 +15548,7 @@ goog.inherits(goog.ui.ToolbarColorMenuButton, goog.ui.ColorMenuButton);
 goog.ui.registry.setDecoratorByClassName(goog.getCssName("goog-toolbar-color-menu-button"), function() {
   return new goog.ui.ToolbarColorMenuButton(null)
 });
-// Input 158
+// Input 160
 goog.provide("goog.ui.ToolbarMenuButton");
 goog.require("goog.ui.ControlContent");
 goog.require("goog.ui.MenuButton");
@@ -15256,7 +15561,7 @@ goog.inherits(goog.ui.ToolbarMenuButton, goog.ui.MenuButton);
 goog.ui.registry.setDecoratorByClassName(goog.ui.ToolbarMenuButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.ToolbarMenuButton(null)
 });
-// Input 159
+// Input 161
 goog.provide("goog.ui.Select");
 goog.require("goog.events.EventType");
 goog.require("goog.ui.Component.EventType");
@@ -15403,7 +15708,7 @@ goog.ui.Select.prototype.setOpen = function(open) {
 goog.ui.registry.setDecoratorByClassName(goog.getCssName("goog-select"), function() {
   return new goog.ui.Select(null)
 });
-// Input 160
+// Input 162
 goog.provide("goog.ui.ToolbarSelect");
 goog.require("goog.ui.ControlContent");
 goog.require("goog.ui.Select");
@@ -15416,7 +15721,7 @@ goog.inherits(goog.ui.ToolbarSelect, goog.ui.Select);
 goog.ui.registry.setDecoratorByClassName(goog.getCssName("goog-toolbar-select"), function() {
   return new goog.ui.ToolbarSelect(null)
 });
-// Input 161
+// Input 163
 goog.provide("goog.ui.LabelInput");
 goog.require("goog.Timer");
 goog.require("goog.dom");
@@ -15585,7 +15890,7 @@ goog.ui.LabelInput.prototype.restoreLabel_ = function() {
     this.getElement().value = this.label_
   }
 };
-// Input 162
+// Input 164
 goog.provide("kemia.controller.ToolbarFactory");
 goog.require("goog.array");
 goog.require("goog.dom");
@@ -15656,10 +15961,10 @@ kemia.controller.ToolbarFactory.createContent_ = function(caption, opt_className
     caption = goog.string.Unicode.NBSP
   }return(opt_domHelper || goog.dom.getDomHelper()).createDom(goog.dom.TagName.DIV, opt_classNames ? {"class":opt_classNames} : null, caption)
 };
-// Input 163
+// Input 165
 goog.provide("kemia.controller.Command");
 kemia.controller.Command = {};
-// Input 164
+// Input 166
 goog.provide("kemia.controller.plugins.Move");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -16105,7 +16410,7 @@ kemia.controller.plugins.Move.prototype.rotateMolecule = function(e, molecule) {
   d.startDrag(e)
 };
 kemia.controller.plugins.Move.prototype.logger = goog.debug.Logger.getLogger("kemia.controller.plugins.Move");
-// Input 165
+// Input 167
 goog.provide("kemia.controller.plugins.Erase");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -16259,7 +16564,7 @@ kemia.controller.plugins.Erase.prototype.highlightPlus = function(plus, opt_grou
 kemia.controller.plugins.Erase.prototype.highlightMolecule = function(molecule, opt_group) {
   return this.editorObject.reactionRenderer.moleculeRenderer.highlightOn(molecule, "#ff6666", opt_group)
 };
-// Input 166
+// Input 168
 goog.provide("kemia.controller.plugins.ClearEditor");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.functions");
@@ -16282,7 +16587,7 @@ kemia.controller.plugins.ClearEditor.prototype.execCommandInternal = function(co
   }
 };
 kemia.controller.plugins.ClearEditor.prototype.isSilentCommand = goog.functions.FALSE;
-// Input 167
+// Input 169
 goog.provide("kemia.controller.plugins.Zoom");
 goog.require("goog.debug.Logger");
 kemia.controller.plugins.Zoom = function() {
@@ -16311,7 +16616,7 @@ kemia.controller.plugins.Zoom.prototype.execCommand = function(command, var_args
   }
 };
 kemia.controller.plugins.Zoom.prototype.logger = goog.debug.Logger.getLogger("kemia.controller.plugins.Zoom");
-// Input 168
+// Input 170
 goog.provide("kemia.controller.plugins.BondEdit");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -16329,7 +16634,7 @@ kemia.controller.plugins.BondEdit.prototype.getTrogClassId = goog.functions.cons
 kemia.controller.plugins.BondEdit.prototype.execCommandInternal = function(command, var_args) {
   this.bond_type = arguments[1]
 };
-kemia.controller.plugins.BondEdit.SHORTCUTS = [{id:"1", key:"1", order:kemia.model.Bond.ORDER.SINGLE, stereo:kemia.model.Bond.STEREO.NOT_STEREO}, {id:"2", key:"2", order:kemia.model.Bond.ORDER.DOUBLE, stereo:kemia.model.Bond.STEREO.NOT_STEREO}, {id:"3", key:"3", order:kemia.model.Bond.ORDER.TRIPLE, stereo:kemia.model.Bond.STEREO.NOT_STEREO}];
+kemia.controller.plugins.BondEdit.SHORTCUTS = [{id:"1", key:"1"}, {id:"2", key:"2"}, {id:"3", key:"3"}, {id:"4", key:"4"}, {id:"5", key:"5"}, {id:"6", key:"6"}, {id:"7", key:"7"}, {id:"8", key:"8"}, {id:"9", key:"9"}];
 kemia.controller.plugins.BondEdit.prototype.getKeyboardShortcuts = function() {
   return kemia.controller.plugins.BondEdit.SHORTCUTS
 };
@@ -16337,23 +16642,37 @@ kemia.controller.plugins.BondEdit.BOND_TYPES = [{caption:"Single", order:kemia.m
 stereo:kemia.model.Bond.STEREO.UP}, {caption:"Single Down", order:kemia.model.Bond.ORDER.SINGLE, stereo:kemia.model.Bond.STEREO.DOWN}, {caption:"Single Up or Down", order:kemia.model.Bond.ORDER.SINGLE, stereo:kemia.model.Bond.STEREO.UP_OR_DOWN}];
 kemia.controller.plugins.BondEdit.prototype.logger = goog.debug.Logger.getLogger("kemia.controller.plugins.BondEdit");
 kemia.controller.plugins.BondEdit.prototype.handleKeyboardShortcut = function(e) {
-  var id = e.identifier;
-  var shortcut = goog.array.find(kemia.controller.plugins.BondEdit.SHORTCUTS, function(obj) {
-    return obj.id == e.identifier
-  });
-  if(shortcut) {
-    this.bond_type = shortcut;
-    return true
+  if(this.bond_type) {
+    var id = e.identifier;
+    var shortcut = goog.array.find(kemia.controller.plugins.BondEdit.SHORTCUTS, function(obj) {
+      return obj.id == e.identifier
+    });
+    if(shortcut) {
+      goog.array.forEach(this.editorObject.getSelected(), function(target) {
+        var repeat = parseInt(shortcut.id);
+        var attachment_atom = target;
+        if(target instanceof kemia.model.Atom) {
+          this.editorObject.dispatchBeforeChange();
+          for(var i = 0;i < repeat;i++) {
+            attachment_atom = this.addBondToAtom(attachment_atom).otherAtom(attachment_atom)
+          }this.editorObject.setModelsSilently(this.editorObject.getModels());
+          this.editorObject.dispatchChange();
+          return true
+        }return true
+      }, this)
+    }
   }
 };
 kemia.controller.plugins.BondEdit.prototype.handleMouseMove = function(e) {
   if(this.bond_type) {
     var target = this.editorObject.findTarget(e);
+    this.editorObject.clearSelected();
     this.editorObject.getOriginalElement().style.cursor = "default";
     if(e.currentTarget.highlightGroup) {
       e.currentTarget.highlightGroup.clear()
     }e.currentTarget.highlightGroup = undefined;
     if(target instanceof kemia.model.Atom) {
+      this.editorObject.addSelected(target);
       this.editorObject.getOriginalElement().style.cursor = "pointer";
       if(!e.currentTarget.highlightGroup) {
         e.currentTarget.highlightGroup = this.highlightAtom(target)
@@ -16362,6 +16681,7 @@ kemia.controller.plugins.BondEdit.prototype.handleMouseMove = function(e) {
       }return true
     }else {
       if(target instanceof kemia.model.Bond) {
+        this.editorObject.addSelected(target);
         this.editorObject.getOriginalElement().style.cursor = "pointer";
         if(!e.currentTarget.highlightGroup) {
           e.currentTarget.highlightGroup = this.highlightBond(target)
@@ -16374,32 +16694,36 @@ kemia.controller.plugins.BondEdit.prototype.handleMouseMove = function(e) {
 };
 kemia.controller.plugins.BondEdit.prototype.handleMouseDown = function(e) {
   if(this.bond_type) {
-    var target = this.editorObject.findTarget(e);
-    if(target instanceof kemia.model.Atom) {
-      this.editorObject.dispatchBeforeChange();
-      this.addBondToAtom(target);
-      this.editorObject.setModelsSilently(this.editorObject.getModels());
-      this.editorObject.dispatchChange();
-      return true
-    }if(target instanceof kemia.model.Bond) {
-      if(this.bond_type) {
-        this.editorObject.dispatchBeforeChange();
-        this.replaceBond(target);
-        this.editorObject.setModelsSilently(this.editorObject.getModels());
-        this.editorObject.dispatchChange();
-        return true
-      }else {
-        if(target._last_click) {
-          if(goog.now() - target._last_click < 1E3) {
+    var selected = this.editorObject.getSelected();
+    if(selected.length) {
+      goog.array.forEach(selected, function(target) {
+        if(target instanceof kemia.model.Atom) {
+          this.editorObject.dispatchBeforeChange();
+          this.addBondToAtom(target);
+          this.editorObject.setModelsSilently(this.editorObject.getModels());
+          this.editorObject.dispatchChange();
+          return true
+        }if(target instanceof kemia.model.Bond) {
+          if(this.bond_type) {
             this.editorObject.dispatchBeforeChange();
-            this.toggleBondType(target);
+            this.replaceBond(target);
             this.editorObject.setModelsSilently(this.editorObject.getModels());
             this.editorObject.dispatchChange();
             return true
+          }else {
+            if(target._last_click) {
+              if(goog.now() - target._last_click < 1E3) {
+                this.editorObject.dispatchBeforeChange();
+                this.toggleBondType(target);
+                this.editorObject.setModelsSilently(this.editorObject.getModels());
+                this.editorObject.dispatchChange();
+                return true
+              }
+            }target._last_click = goog.now()
           }
-        }target._last_click = goog.now()
-      }
-    }if(target == undefined && this.bond_type) {
+        }
+      }, this)
+    }else {
       this.editorObject.dispatchBeforeChange();
       this.createMolecule(kemia.controller.ReactionEditor.getMouseCoords(e));
       this.editorObject.setModelsSilently(this.editorObject.getModels());
@@ -16456,34 +16780,45 @@ kemia.controller.plugins.BondEdit.prototype.replaceBond = function(bond) {
 };
 kemia.controller.plugins.BondEdit.prototype.addBondToAtom = function(atom) {
   if(this.bond_type) {
-    var angles = goog.array.map(atom.bonds.getValues(), function(bond) {
-      var other_atom = bond.otherAtom(atom);
-      return goog.math.angle(atom.coord.x, atom.coord.y, other_atom.coord.x, other_atom.coord.y)
-    });
     var new_angle;
-    if(angles.length == 0) {
+    if(atom.bonds.getValues().length == 0) {
       new_angle = 0
-    }if(angles.length == 1) {
-      if(angles[0] > 0) {
-        new_angle = goog.math.toRadians(angles[0] - 120)
+    }if(atom.bonds.getValues().length == 1) {
+      var other_atom = atom.bonds.getValues()[0].otherAtom(atom);
+      var existing_angle = goog.math.angle(atom.coord.x, atom.coord.y, other_atom.coord.x, other_atom.coord.y);
+      var other_angles_diff = goog.array.map(other_atom.bonds.getValues(), function(b) {
+        var not_other = b.otherAtom(other_atom);
+        if(not_other != atom) {
+          return goog.math.angleDifference(existing_angle, goog.math.angle(other_atom.coord.x, other_atom.coord.y, not_other.coord.x, not_other.coord.y))
+        }
+      });
+      goog.array.sort(other_angles_diff);
+      var min_angle = other_angles_diff[0];
+      if(min_angle > 0) {
+        new_angle = existing_angle - 120
       }else {
-        new_angle = goog.math.toRadians(angles[0] + 120)
+        new_angle = existing_angle + 120
       }
     }else {
-      if(angles.length == 2) {
+      if(atom.bonds.getValues().length == 2) {
+        var angles = goog.array.map(atom.bonds.getValues(), function(bond) {
+          var other_atom = bond.otherAtom(atom);
+          return goog.math.angle(atom.coord.x, atom.coord.y, other_atom.coord.x, other_atom.coord.y)
+        });
         var diff = goog.math.angleDifference(angles[0], angles[1]);
         if(Math.abs(diff) < 180) {
           diff = 180 + diff / 2
         }else {
           diff = diff / 2
-        }new_angle = goog.math.toRadians(angles[0] + diff)
+        }new_angle = angles[0] + diff
       }
     }if(new_angle != undefined) {
-      var new_atom = new kemia.model.Atom("C", atom.coord.x + Math.cos(new_angle) * 1.25, atom.coord.y + Math.sin(new_angle) * 1.25);
+      var new_atom = new kemia.model.Atom("C", atom.coord.x + goog.math.angleDx(new_angle, 1.25), atom.coord.y + goog.math.angleDy(new_angle, 1.25));
       var new_bond = new kemia.model.Bond(atom, new_atom, this.bond_type.order, this.bond_type.stereo);
       var molecule = atom.molecule;
       molecule.addAtom(new_atom);
-      molecule.addBond(new_bond)
+      molecule.addBond(new_bond);
+      return new_bond
     }
   }
 };
@@ -16501,7 +16836,7 @@ kemia.controller.plugins.BondEdit.prototype.queryCommandValue = function(command
     return this.bond_type
   }
 };
-// Input 169
+// Input 171
 goog.provide("kemia.controller.plugins.AtomEdit");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -16606,7 +16941,7 @@ kemia.controller.plugins.AtomEdit.prototype.queryCommandValue = function(command
     return this.symbol
   }
 };
-// Input 170
+// Input 172
 goog.provide("goog.json");
 goog.provide("goog.json.Serializer");
 goog.json.isValid_ = function(s) {
@@ -16719,7 +17054,7 @@ goog.json.Serializer.prototype.serializeObject_ = function(obj, sb) {
     }
   }sb.push("}")
 };
-// Input 171
+// Input 173
 goog.provide("goog.date");
 goog.provide("goog.date.Date");
 goog.provide("goog.date.DateTime");
@@ -17267,7 +17602,7 @@ goog.date.DateTime.prototype.clone = function() {
   date.setFirstWeekCutOffDay(this.getFirstWeekCutOffDay());
   return date
 };
-// Input 172
+// Input 174
 goog.provide("kemia.controller.plugins.UndoRedo");
 goog.require("goog.debug.Logger");
 goog.require("goog.json");
@@ -17288,18 +17623,6 @@ kemia.controller.plugins.UndoRedo.prototype.getKeyboardShortcuts = function() {
   return kemia.controller.plugins.UndoRedo.SHORTCUTS
 };
 kemia.controller.plugins.UndoRedo.prototype.handleKeyboardShortcut = function(e) {
-  try {
-    var id = e.identifier;
-    var shortcut = goog.array.find(kemia.controller.plugins.UndoRedo.SHORTCUTS, function(obj) {
-      return obj.id == e.identifier
-    });
-    if(shortcut.id == "undo") {
-      this.undo();
-      return true
-    }
-  }catch(e) {
-    this.logger.info(e)
-  }
 };
 kemia.controller.plugins.UndoRedo.SUPPORTED_COMMANDS_ = goog.object.transpose(kemia.controller.plugins.UndoRedo.COMMAND);
 kemia.controller.plugins.UndoRedo.prototype.getTrogClassId = function() {
@@ -17430,7 +17753,7 @@ kemia.controller.plugins.UndoRedo.prototype.queryCommandValue = function(command
     }
   }return state
 };
-// Input 173
+// Input 175
 goog.provide("kemia.model.Arrow");
 goog.require("kemia.math.Line");
 goog.require("goog.math.Vec2");
@@ -17480,12 +17803,12 @@ kemia.model.Arrow.prototype.toString = function() {
 };
 kemia.model.Arrow.STYLES = {FORWARD:1, BACKWARD:2, BIDIRECTIONAL:3};
 kemia.model.Arrow.ORIENTATION = {AHEAD:1, BEHIND:2};
-// Input 174
+// Input 176
 goog.provide("kemia.model.Plus");
 kemia.model.Plus = function(coord) {
   this.coord = goog.isDef(coord) ? coord : new goog.math.Coordinate(0, 0)
 };
-// Input 175
+// Input 177
 goog.provide("kemia.controller.plugins.ArrowPlusEdit");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -17536,7 +17859,7 @@ kemia.controller.plugins.ArrowPlusEdit.prototype.queryCommandValue = function(co
     state = this.activeCommand[command]
   }return state
 };
-// Input 176
+// Input 178
 goog.provide("goog.memoize");
 goog.memoize = function(f, opt_serializer) {
   var functionUid = goog.getUid(f);
@@ -17562,7 +17885,7 @@ goog.memoize.simpleSerializer = function(functionUid, args) {
     context.push(typeof args[i], args[i])
   }return context.join("\u000b")
 };
-// Input 177
+// Input 179
 goog.provide("kemia.ring.Ring");
 goog.require("kemia.model.Flags");
 goog.require("goog.array");
@@ -17590,7 +17913,7 @@ kemia.ring.Ring.prototype.getCenter = function() {
 kemia.ring.Ring.prototype.resetRingCenter = function() {
   this._center = undefined
 };
-// Input 178
+// Input 180
 goog.provide("kemia.ring.PathEdge");
 kemia.ring.PathEdge = function(_atoms) {
   this.atoms = _atoms
@@ -17638,7 +17961,7 @@ kemia.ring.PathEdge.prototype.getIntersection = function(others) {
     return this.atoms[0]
   }throw"Couldn't splice - no intersection";
 };
-// Input 179
+// Input 181
 goog.provide("kemia.ring.PathGraph");
 kemia.ring.PathGraph = function(molecule) {
   this.edges = new Array;
@@ -17703,7 +18026,7 @@ kemia.ring.PathGraph.prototype.spliceEdges = function(_edges) {
     }
   }return result
 };
-// Input 180
+// Input 182
 goog.provide("kemia.ring.Hanser");
 goog.require("goog.structs.Set");
 goog.require("goog.structs.Set");
@@ -17738,7 +18061,7 @@ kemia.ring.Hanser.createRing = function(atoms, molecule) {
   var ring = new kemia.ring.Ring(atoms, bonds);
   return ring
 };
-// Input 181
+// Input 183
 goog.provide("kemia.ring.SSSR");
 goog.require("goog.structs.Set");
 goog.require("goog.array");
@@ -17996,7 +18319,7 @@ kemia.ring.SSSR.findRings = function(molecule) {
   }return indexes
 };
 goog.exportSymbol("kemia.ring.SSSR.findRings", kemia.ring.SSSR.findRings);
-// Input 182
+// Input 184
 goog.provide("kemia.ring.RingFinder");
 goog.require("kemia.ring.Hanser");
 goog.require("kemia.ring.SSSR");
@@ -18222,7 +18545,7 @@ kemia.ring.RingFinder.findRings = function(molecule) {
   return kemia.ring.RingFinder.createRingSystems(molecule)
 };
 goog.exportSymbol("kemia.ring.RingFinder.findRings", kemia.ring.RingFinder.findRings);
-// Input 183
+// Input 185
 goog.provide("kemia.model.Molecule");
 goog.require("goog.array");
 goog.require("kemia.ring.RingFinder");
@@ -18434,7 +18757,7 @@ kemia.model.Molecule.prototype.translate = function(vector) {
   })
 };
 kemia.model.Molecule.prototype.logger = goog.debug.Logger.getLogger("kemia.model.Molecule");
-// Input 184
+// Input 186
 goog.provide("kemia.controller.plugins.MoleculeEdit");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -18554,7 +18877,7 @@ coord:{x:0, y:1.2135, z:0}, charge:0}, {symbol:"N", coord:{x:-0.8817, y:0, z:0},
 {symbol:"C", coord:{x:2.5981, y:2.25, z:0}, charge:0}, {symbol:"C", coord:{x:1.2991, y:3, z:0}, charge:0}, {symbol:"C", coord:{x:0, y:2.25, z:0}, charge:0}, {symbol:"C", coord:{x:0, y:0.75, z:0}, charge:0}, {symbol:"C", coord:{x:1.2991, y:0, z:0}, charge:0}, {symbol:"C", coord:{x:3.8971, y:3, z:0}, charge:0}, {symbol:"C", coord:{x:5.1962, y:2.25, z:0}, charge:0}, {symbol:"C", coord:{x:5.1962, y:0.75, z:0}, charge:0}, {symbol:"C", coord:{x:3.8971, y:0, z:0}, charge:0}], bondindex:[{source:0, target:1, 
 type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:2, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:2, target:3, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:3, target:4, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:4, target:5, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:5, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:6, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:6, target:7, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:7, target:8, 
 type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:8, target:9, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:9, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}];
-// Input 185
+// Input 187
 goog.provide("kemia.layout.Vector2D");
 kemia.layout.Vector2D = function(x, y) {
   if(arguments.length > 0) {
@@ -18655,7 +18978,7 @@ kemia.layout.Vector2D.prototype.angle = function(v1) {
     vDot = 1
   }return Math.acos(vDot)
 };
-// Input 186
+// Input 188
 goog.provide("kemia.layout.ConnectionMatrix");
 kemia.layout.ConnectionMatrix = function() {
 };
@@ -18691,7 +19014,7 @@ kemia.layout.ConnectionMatrix.display = function(matrix) {
     }debug += "\n"
   }alert(debug)
 };
-// Input 187
+// Input 189
 goog.provide("kemia.layout.AtomPlacer");
 goog.require("kemia.layout.ConnectionMatrix");
 goog.require("kemia.layout.Vector2D");
@@ -19068,7 +19391,7 @@ kemia.layout.AtomPlacer.markPlaced = function(atoms) {
     atom.setFlag(kemia.model.Flags.ISPLACED, true)
   })
 };
-// Input 188
+// Input 190
 goog.provide("kemia.layout.RingPlacer");
 goog.require("kemia.layout.Vector2D");
 goog.require("goog.math.Coordinate");
@@ -19388,7 +19711,7 @@ kemia.layout.RingPlacer.layoutNextRingSystem = function(firstBondVector, molecul
     })
   }
 };
-// Input 189
+// Input 191
 goog.provide("kemia.ring.RingPartitioner");
 goog.require("goog.array");
 kemia.ring.RingPartitioner.getPartitionedRings = function(rings) {
@@ -19479,7 +19802,7 @@ kemia.ring.RingPartitioner.directConnectedRings = function(ring, rings) {
   });
   return result
 };
-// Input 190
+// Input 192
 goog.provide("kemia.layout.OverlapResolver");
 goog.require("kemia.layout.Vector2D");
 kemia.layout.OverlapResolver.resolveOverlap = function(molecule, sssr) {
@@ -19541,7 +19864,7 @@ kemia.layout.OverlapResolver.displace = function(molecule, overlappingAtoms) {
   }while(overlapScore > 0 && !(steps > maxSteps));
   return overlapScore
 };
-// Input 191
+// Input 193
 goog.provide("kemia.layout.CoordinateGenerator");
 goog.require("kemia.layout.Vector2D");
 goog.require("kemia.layout.AtomPlacer");
@@ -19710,7 +20033,7 @@ kemia.layout.CoordinateGenerator.handleAliphatics = function(molecule, bondCount
     }
   }while(!done && cntr <= molecule.countAtoms())
 };
-// Input 192
+// Input 194
 goog.provide("kemia.controller.plugins.Cleanup");
 goog.require("goog.debug.Logger");
 goog.require("kemia.layout.CoordinateGenerator");
@@ -19750,7 +20073,7 @@ kemia.controller.plugins.Cleanup.prototype.execCommand = function(command, var_a
   }
 };
 kemia.controller.plugins.Cleanup.prototype.logger = goog.debug.Logger.getLogger("kemia.controller.plugins.Cleanup");
-// Input 193
+// Input 195
 goog.provide("goog.ui.FlatButtonRenderer");
 goog.require("goog.dom.classes");
 goog.require("goog.ui.Button");
@@ -19784,7 +20107,7 @@ goog.ui.FlatButtonRenderer.prototype.getCssClass = function() {
 goog.ui.registry.setDecoratorByClassName(goog.ui.FlatButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.Button(null, goog.ui.FlatButtonRenderer.getInstance())
 });
-// Input 194
+// Input 196
 goog.provide("goog.ui.FlatMenuButtonRenderer");
 goog.require("goog.style");
 goog.require("goog.ui.ControlContent");
@@ -19836,7 +20159,7 @@ goog.ui.FlatMenuButtonRenderer.prototype.getCssClass = function() {
 goog.ui.registry.setDecoratorByClassName(goog.ui.FlatMenuButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.MenuButton(null, null, goog.ui.FlatMenuButtonRenderer.getInstance())
 });
-// Input 195
+// Input 197
 goog.provide("kemia.controller.TemplateMenuButtonRenderer");
 goog.require("goog.ui.FlatMenuButtonRenderer");
 kemia.controller.TemplateMenuButtonRenderer = function() {
@@ -19844,7 +20167,7 @@ kemia.controller.TemplateMenuButtonRenderer = function() {
 };
 goog.inherits(kemia.controller.TemplateMenuButtonRenderer, goog.ui.FlatMenuButtonRenderer);
 goog.addSingletonGetter(kemia.controller.TemplateMenuButtonRenderer);
-// Input 196
+// Input 198
 goog.provide("goog.ui.ToolbarSeparator");
 goog.require("goog.ui.Separator");
 goog.require("goog.ui.ToolbarSeparatorRenderer");
@@ -19856,7 +20179,7 @@ goog.inherits(goog.ui.ToolbarSeparator, goog.ui.Separator);
 goog.ui.registry.setDecoratorByClassName(goog.ui.ToolbarSeparatorRenderer.CSS_CLASS, function() {
   return new goog.ui.ToolbarSeparator
 });
-// Input 197
+// Input 199
 goog.provide("kemia.controller.DefaultToolbar");
 goog.require("goog.dom");
 goog.require("goog.dom.TagName");
@@ -20141,7 +20464,7 @@ kemia.controller.DefaultToolbar.BUTTONS_ = [];
     kemia.controller.DefaultToolbar.buttons_[button.command] = button
   }delete kemia.controller.DefaultToolbar.BUTTONS_
 })();
-// Input 198
+// Input 200
 goog.provide("kemia.controller.ToolbarController");
 goog.require("kemia.controller.ReactionEditor.EventType");
 goog.require("goog.events.EventHandler");
@@ -20237,7 +20560,7 @@ kemia.controller.ToolbarController.prototype.handleAction = function(e) {
   }this.editor_.execCommand(command, value, checked, e)
 };
 kemia.controller.ToolbarController.prototype.logger = goog.debug.Logger.getLogger("kemia.controller.ToolbarController");
-// Input 199
+// Input 201
 goog.provide("kemia.model.Reaction");
 goog.require("kemia.model.Molecule");
 goog.require("goog.math.Box");
@@ -20410,7 +20733,7 @@ kemia.model.Reaction.prototype.centerArrow = function() {
   var diff = goog.math.Vec2.fromCoordinate(midpoint).subtract(goog.math.Vec2.fromCoordinate(this.arrow.getCenter()));
   this.arrow.translate(diff)
 };
-// Input 200
+// Input 202
 goog.provide("kemia.io.json");
 goog.require("kemia.model.Reaction");
 goog.require("kemia.model.Molecule");
@@ -20578,7 +20901,7 @@ kemia.io.json.writeReaction = function(rxn) {
   return(new goog.json.Serializer).serialize(kemia.io.json.reactionToJson(rxn))
 };
 goog.exportSymbol("kemia.io.json.writeReaction", kemia.io.json.writeReaction);
-// Input 201
+// Input 203
 goog.provide("goog.i18n.DateTimeSymbols");
 goog.provide("goog.i18n.DateTimeSymbols_am");
 goog.provide("goog.i18n.DateTimeSymbols_ar");
@@ -21364,7 +21687,7 @@ if(goog.LOCALE == "am") {
     }
   }
 };
-// Input 202
+// Input 204
 goog.provide("goog.i18n.TimeZone");
 goog.require("goog.array");
 goog.require("goog.string");
@@ -21460,7 +21783,7 @@ goog.i18n.TimeZone.prototype.getTimeZoneId = function() {
 goog.i18n.TimeZone.prototype.isDaylightTime = function(date) {
   return this.getDaylightAdjustment(date) > 0
 };
-// Input 203
+// Input 205
 goog.provide("goog.i18n.DateTimeFormat");
 goog.require("goog.asserts");
 goog.require("goog.i18n.DateTimeSymbols");
@@ -21675,7 +21998,7 @@ goog.i18n.DateTimeFormat.prototype.formatField_ = function(patternStr, date, dat
       return""
   }
 };
-// Input 204
+// Input 206
 goog.provide("kemia.io.mdl");
 goog.require("goog.i18n.DateTimeFormat");
 goog.require("goog.string");
@@ -21894,7 +22217,7 @@ kemia.io.mdl.readRxnfile = function(rxnfile) {
   }return reaction
 };
 goog.exportSymbol("kemia.io.mdl.readMolfile", kemia.io.mdl.readMolfile);
-// Input 205
+// Input 207
 goog.provide("kemia.io.smiles.SmilesGenerator");
 goog.require("kemia.model.Molecule");
 goog.require("kemia.model.Atom");
@@ -21916,7 +22239,7 @@ kemia.io.smiles.SmilesGenerator.generate = function(molecule, chiral) {
   if(chiral && rings.getAtomContainerCount() > 0);return"todo.."
 };
 goog.exportSymbol("kemia.io.smiles.SmilesGenerator.generate", kemia.io.smiles.SmilesGenerator.generate);
-// Input 206
+// Input 208
 goog.provide("kemia.query.IMapper");
 kemia.query.IMapper = function(query) {
 };
@@ -21926,7 +22249,7 @@ kemia.query.IMapper.prototype.mapUnique = function(molecule) {
 };
 kemia.query.IMapper.prototype.mapUniqueCallback = function(molecule, callback) {
 };
-// Input 207
+// Input 209
 goog.provide("kemia.query.State");
 kemia.query.State = function(type, query, queried) {
   this.type = type;
@@ -21937,7 +22260,7 @@ kemia.query.State = function(type, query, queried) {
   this.queriedPath = [];
   this.candidates = []
 };
-// Input 208
+// Input 210
 goog.provide("kemia.query.DFSMapper");
 goog.provide("kemia.query.DFSMapper.Type");
 goog.require("kemia.query.IMapper");
@@ -22112,13 +22435,13 @@ kemia.query.DFSMapper.prototype.mapFirst = function(queried) {
   }return new goog.structs.Map
 };
 goog.exportSymbol("kemia.query.DFSMapper.prototype.mapFirst", kemia.query.DFSMapper.prototype.mapFirst);
-// Input 209
+// Input 211
 goog.provide("kemia.query.IQueryCompiler");
 kemia.query.IQueryCompiler = function() {
 };
 kemia.query.IQueryCompiler.prototype.compile = function(variable) {
 };
-// Input 210
+// Input 212
 goog.provide("kemia.io.smiles.SmilesParser");
 goog.require("kemia.model.Molecule");
 goog.require("kemia.model.Atom");
@@ -22368,7 +22691,7 @@ Ce:{number:58, name:"Cerium"}, Pr:{number:59, name:"Praseodymium"}, Nd:{number:6
 name:"Tantalum"}, W:{number:74, name:"Tungsten"}, Re:{number:75, name:"Rhenium"}, Os:{number:76, name:"Osmium"}, Ir:{number:77, name:"Iridium"}, Pt:{number:78, name:"Platinum"}, Au:{number:79, name:"Gold"}, Hg:{number:80, name:"Mercury"}, Tl:{number:81, name:"Thallium"}, Pb:{number:82, name:"Lead"}, Bi:{number:83, name:"Bismuth"}, Po:{number:84, name:"Polonium"}, At:{number:85, name:"Astatine"}, Rn:{number:86, name:"Radon"}, Fr:{number:87, name:"Francium"}, Ra:{number:88, name:"Radium"}, Ac:{number:89, 
 name:"Actinium"}, Th:{number:90, name:"Thorium"}, Pa:{number:91, name:"Protactinium"}, U:{number:92, name:"Uranium"}, Np:{number:93, name:"Neptunium"}, Pu:{number:94, name:"Plutonium"}, Am:{number:95, name:"Americium"}, Cm:{number:96, name:"Curium"}, Bk:{number:97, name:"Berkelium"}, Cf:{number:98, name:"Californium"}, Es:{number:99, name:"Einsteinium"}, Fm:{number:100, name:"Fermium"}, Md:{number:101, name:"Mendelevium"}, No:{number:102, name:"Nobelium"}, Lr:{number:103, name:"Lawrencium"}, Rf:{number:104, 
 name:"Rutherfordium"}, Db:{number:105, name:"Dubnium"}, Sg:{number:106, name:"Seaborgium"}, Bh:{number:107, name:"Bohrium"}, Hs:{number:108, name:"Hassium"}, Mt:{number:109, name:"Meitnerium"}, Ds:{number:110, name:"Darmstadtium"}, Rg:{number:111, name:"Roentgenium"}, Cn:{number:112, name:"Copernicium"}};
-// Input 211
+// Input 213
 goog.provide("kemia.query.IQueryAtom");
 kemia.query.IQueryAtom = function() {
 };
@@ -22376,13 +22699,13 @@ kemia.query.IQueryAtom.prototype.matches = function(atom, opt_molecule, opt_sssr
 };
 kemia.query.IQueryAtom.prototype.getNeighbors = function() {
 };
-// Input 212
+// Input 214
 goog.provide("kemia.query.IQueryBond");
 kemia.query.IQueryBond = function(source, target) {
 };
 kemia.query.IQueryBond.prototype.matches = function(bond, opt_molecule, opt_sssr) {
 };
-// Input 213
+// Input 215
 goog.provide("kemia.query.IQuery");
 goog.require("kemia.query.IQueryAtom");
 goog.require("kemia.query.IQueryBond");
@@ -22400,7 +22723,7 @@ kemia.query.IQuery.prototype.findBond = function(atom1, atom2) {
 };
 kemia.query.IQuery.prototype.indexOfAtom = function(atom) {
 };
-// Input 214
+// Input 216
 goog.provide("kemia.query.Query");
 goog.require("kemia.query.IQuery");
 kemia.query.Query = function() {
@@ -22433,7 +22756,7 @@ kemia.query.Query.prototype.findBond = function(atom1, atom2) {
     }
   }return null
 };
-// Input 215
+// Input 217
 goog.provide("kemia.query.QueryAtom");
 goog.require("kemia.query.IQueryAtom");
 kemia.query.QueryAtom = function() {
@@ -22453,7 +22776,7 @@ kemia.query.QueryAtom.prototype.matches = function(atom, opt_molecule, opt_sssr)
 kemia.query.QueryAtom.prototype.getNeighbors = function() {
   return this.neighbors
 };
-// Input 216
+// Input 218
 goog.provide("kemia.query.QueryBond");
 goog.require("kemia.query.IQueryBond");
 kemia.query.QueryBond = function(source, target) {
@@ -22468,7 +22791,7 @@ kemia.query.QueryBond.prototype.matches = function(bond, opt_molecule, opt_sssr)
     return true
   }return false
 };
-// Input 217
+// Input 219
 goog.provide("kemia.query.MoleculeCompiler");
 goog.require("kemia.query.Query");
 goog.require("kemia.query.QueryAtom");
@@ -22492,7 +22815,7 @@ kemia.query.MoleculeCompiler.prototype.compile = function(molecule) {
   }return query
 };
 goog.exportSymbol("kemia.query.MoleculeCompiler.prototype.compile", kemia.query.MoleculeCompiler.prototype.compile);
-// Input 218
+// Input 220
 goog.provide("kemia.query.SmilesCompiler");
 goog.require("kemia.query.IQueryCompiler");
 goog.require("kemia.io.smiles.SmilesParser");
