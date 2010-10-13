@@ -23,7 +23,7 @@ function initPage(){
 	var c = new goog.debug.Console(); 
 	c.setCapturing(true); 
 
-	var toolbar = kemia.controller.DefaultToolbar.makeDefaultToolbar(goog.dom.getElement('reactionEditorToolbar'));  
+	var toolbar = kemia.controller.DefaultToolbar.makeDefaultReactionToolbar(goog.dom.getElement('reactionEditorToolbar'));  
 	var model = kemia.io.json.readReaction(reactionDrawing); 
 	model.reagentsText = "NaOH";
 	model.conditionsText = "90" + String.fromCharCode(186) +"C";
