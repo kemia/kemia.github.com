@@ -252,7 +252,11 @@ goog.isObject = function(val) {
   return type == "object" || type == "array" || type == "function"
 };
 goog.getUid = function(obj) {
-  return obj[goog.UID_PROPERTY_] || (obj[goog.UID_PROPERTY_] = ++goog.uidCounter_)
+  if(obj.hasOwnProperty && obj.hasOwnProperty(goog.UID_PROPERTY_)) {
+    return obj[goog.UID_PROPERTY_]
+  }if(!obj[goog.UID_PROPERTY_]) {
+    obj[goog.UID_PROPERTY_] = ++goog.uidCounter_
+  }return obj[goog.UID_PROPERTY_]
 };
 goog.removeUid = function(obj) {
   if("removeAttribute" in obj) {
@@ -266,16 +270,16 @@ goog.UID_PROPERTY_ = "closure_uid_" + Math.floor(Math.random() * 2147483648).toS
 goog.uidCounter_ = 0;
 goog.getHashCode = goog.getUid;
 goog.removeHashCode = goog.removeUid;
-goog.cloneObject = function(obj) {
-  var type = goog.typeOf(obj);
+goog.cloneObject = function(proto) {
+  var type = goog.typeOf(proto);
   if(type == "object" || type == "array") {
-    if(obj.clone) {
-      return obj.clone()
+    if(proto.clone) {
+      return proto.clone.call(proto)
     }var clone = type == "array" ? [] : {};
-    for(var key in obj) {
-      clone[key] = goog.cloneObject(obj[key])
+    for(var key in proto) {
+      clone[key] = goog.cloneObject(proto[key])
     }return clone
-  }return obj
+  }return proto
 };
 Object.prototype.clone;
 goog.bind = function(fn, selfObj, var_args) {
@@ -350,8 +354,7 @@ goog.setCssNameMapping = function(mapping) {
 goog.getMsg = function(str, opt_values) {
   var values = opt_values || {};
   for(var key in values) {
-    var value = ("" + values[key]).replace(/\$/g, "$$$$");
-    str = str.replace(new RegExp("\\{\\$" + key + "\\}", "gi"), value)
+    str = str.replace(new RegExp("\\{\\$" + key + "\\}", "gi"), values[key])
   }return str
 };
 goog.exportSymbol = function(publicPath, object, opt_objectToExportTo) {
@@ -388,457 +391,14 @@ goog.base = function(me, opt_methodName, var_args) {
     throw Error("goog.base called from a method of one name " + "to a method of a different name");
   }
 };
-goog.scope = function(fn) {
-  fn.call(goog.global)
-};
 // Input 1
-goog.provide("goog.debug.Error");
-goog.debug.Error = function(opt_msg) {
-  this.stack = (new Error).stack || "";
-  if(opt_msg) {
-    this.message = String(opt_msg)
-  }
-};
-goog.inherits(goog.debug.Error, Error);
-goog.debug.Error.prototype.name = "CustomError";
-// Input 2
-goog.provide("goog.string");
-goog.provide("goog.string.Unicode");
-goog.string.Unicode = {NBSP:"\u00a0"};
-goog.string.startsWith = function(str, prefix) {
-  return str.lastIndexOf(prefix, 0) == 0
-};
-goog.string.endsWith = function(str, suffix) {
-  var l = str.length - suffix.length;
-  return l >= 0 && str.indexOf(suffix, l) == l
-};
-goog.string.caseInsensitiveStartsWith = function(str, prefix) {
-  return goog.string.caseInsensitiveCompare(prefix, str.substr(0, prefix.length)) == 0
-};
-goog.string.caseInsensitiveEndsWith = function(str, suffix) {
-  return goog.string.caseInsensitiveCompare(suffix, str.substr(str.length - suffix.length, suffix.length)) == 0
-};
-goog.string.subs = function(str, var_args) {
-  for(var i = 1;i < arguments.length;i++) {
-    var replacement = String(arguments[i]).replace(/\$/g, "$$$$");
-    str = str.replace(/\%s/, replacement)
-  }return str
-};
-goog.string.collapseWhitespace = function(str) {
-  return str.replace(/[\s\xa0]+/g, " ").replace(/^\s+|\s+$/g, "")
-};
-goog.string.isEmpty = function(str) {
-  return/^[\s\xa0]*$/.test(str)
-};
-goog.string.isEmptySafe = function(str) {
-  return goog.string.isEmpty(goog.string.makeSafe(str))
-};
-goog.string.isBreakingWhitespace = function(str) {
-  return!/[^\t\n\r ]/.test(str)
-};
-goog.string.isAlpha = function(str) {
-  return!/[^a-zA-Z]/.test(str)
-};
-goog.string.isNumeric = function(str) {
-  return!/[^0-9]/.test(str)
-};
-goog.string.isAlphaNumeric = function(str) {
-  return!/[^a-zA-Z0-9]/.test(str)
-};
-goog.string.isSpace = function(ch) {
-  return ch == " "
-};
-goog.string.isUnicodeChar = function(ch) {
-  return ch.length == 1 && ch >= " " && ch <= "~" || ch >= "\u0080" && ch <= "\ufffd"
-};
-goog.string.stripNewlines = function(str) {
-  return str.replace(/(\r\n|\r|\n)+/g, " ")
-};
-goog.string.canonicalizeNewlines = function(str) {
-  return str.replace(/(\r\n|\r|\n)/g, "\n")
-};
-goog.string.normalizeWhitespace = function(str) {
-  return str.replace(/\xa0|\s/g, " ")
-};
-goog.string.normalizeSpaces = function(str) {
-  return str.replace(/\xa0|[ \t]+/g, " ")
-};
-goog.string.trim = function(str) {
-  return str.replace(/^[\s\xa0]+|[\s\xa0]+$/g, "")
-};
-goog.string.trimLeft = function(str) {
-  return str.replace(/^[\s\xa0]+/, "")
-};
-goog.string.trimRight = function(str) {
-  return str.replace(/[\s\xa0]+$/, "")
-};
-goog.string.caseInsensitiveCompare = function(str1, str2) {
-  var test1 = String(str1).toLowerCase();
-  var test2 = String(str2).toLowerCase();
-  if(test1 < test2) {
-    return-1
-  }else {
-    if(test1 == test2) {
-      return 0
-    }else {
-      return 1
-    }
-  }
-};
-goog.string.numerateCompareRegExp_ = /(\.\d+)|(\d+)|(\D+)/g;
-goog.string.numerateCompare = function(str1, str2) {
-  if(str1 == str2) {
-    return 0
-  }if(!str1) {
-    return-1
-  }if(!str2) {
-    return 1
-  }var tokens1 = str1.toLowerCase().match(goog.string.numerateCompareRegExp_);
-  var tokens2 = str2.toLowerCase().match(goog.string.numerateCompareRegExp_);
-  var count = Math.min(tokens1.length, tokens2.length);
-  for(var i = 0;i < count;i++) {
-    var a = tokens1[i];
-    var b = tokens2[i];
-    if(a != b) {
-      var num1 = parseInt(a, 10);
-      if(!isNaN(num1)) {
-        var num2 = parseInt(b, 10);
-        if(!isNaN(num2) && num1 - num2) {
-          return num1 - num2
-        }
-      }return a < b ? -1 : 1
-    }
-  }if(tokens1.length != tokens2.length) {
-    return tokens1.length - tokens2.length
-  }return str1 < str2 ? -1 : 1
-};
-goog.string.encodeUriRegExp_ = /^[a-zA-Z0-9\-_.!~*'()]*$/;
-goog.string.urlEncode = function(str) {
-  str = String(str);
-  if(!goog.string.encodeUriRegExp_.test(str)) {
-    return encodeURIComponent(str)
-  }return str
-};
-goog.string.urlDecode = function(str) {
-  return decodeURIComponent(str.replace(/\+/g, " "))
-};
-goog.string.newLineToBr = function(str, opt_xml) {
-  return str.replace(/(\r\n|\r|\n)/g, opt_xml ? "<br />" : "<br>")
-};
-goog.string.htmlEscape = function(str, opt_isLikelyToContainHtmlChars) {
-  if(opt_isLikelyToContainHtmlChars) {
-    return str.replace(goog.string.amperRe_, "&amp;").replace(goog.string.ltRe_, "&lt;").replace(goog.string.gtRe_, "&gt;").replace(goog.string.quotRe_, "&quot;")
-  }else {
-    if(!goog.string.allRe_.test(str)) {
-      return str
-    }if(str.indexOf("&") != -1) {
-      str = str.replace(goog.string.amperRe_, "&amp;")
-    }if(str.indexOf("<") != -1) {
-      str = str.replace(goog.string.ltRe_, "&lt;")
-    }if(str.indexOf(">") != -1) {
-      str = str.replace(goog.string.gtRe_, "&gt;")
-    }if(str.indexOf('"') != -1) {
-      str = str.replace(goog.string.quotRe_, "&quot;")
-    }return str
-  }
-};
-goog.string.amperRe_ = /&/g;
-goog.string.ltRe_ = /</g;
-goog.string.gtRe_ = />/g;
-goog.string.quotRe_ = /\"/g;
-goog.string.allRe_ = /[&<>\"]/;
-goog.string.unescapeEntities = function(str) {
-  if(goog.string.contains(str, "&")) {
-    if("document" in goog.global && !goog.string.contains(str, "<")) {
-      return goog.string.unescapeEntitiesUsingDom_(str)
-    }else {
-      return goog.string.unescapePureXmlEntities_(str)
-    }
-  }return str
-};
-goog.string.unescapeEntitiesUsingDom_ = function(str) {
-  var el = goog.global["document"]["createElement"]("div");
-  el["innerHTML"] = "<pre>x" + str + "</pre>";
-  if(el["firstChild"][goog.string.NORMALIZE_FN_]) {
-    el["firstChild"][goog.string.NORMALIZE_FN_]()
-  }str = el["firstChild"]["firstChild"]["nodeValue"].slice(1);
-  el["innerHTML"] = "";
-  return goog.string.canonicalizeNewlines(str)
-};
-goog.string.unescapePureXmlEntities_ = function(str) {
-  return str.replace(/&([^;]+);/g, function(s, entity) {
-    switch(entity) {
-      case "amp":
-        return"&";
-      case "lt":
-        return"<";
-      case "gt":
-        return">";
-      case "quot":
-        return'"';
-      default:
-        if(entity.charAt(0) == "#") {
-          var n = Number("0" + entity.substr(1));
-          if(!isNaN(n)) {
-            return String.fromCharCode(n)
-          }
-        }return s
-    }
-  })
-};
-goog.string.NORMALIZE_FN_ = "normalize";
-goog.string.whitespaceEscape = function(str, opt_xml) {
-  return goog.string.newLineToBr(str.replace(/  /g, " &#160;"), opt_xml)
-};
-goog.string.stripQuotes = function(str, quoteChars) {
-  var length = quoteChars.length;
-  for(var i = 0;i < length;i++) {
-    var quoteChar = length == 1 ? quoteChars : quoteChars.charAt(i);
-    if(str.charAt(0) == quoteChar && str.charAt(str.length - 1) == quoteChar) {
-      return str.substring(1, str.length - 1)
-    }
-  }return str
-};
-goog.string.truncate = function(str, chars, opt_protectEscapedCharacters) {
-  if(opt_protectEscapedCharacters) {
-    str = goog.string.unescapeEntities(str)
-  }if(str.length > chars) {
-    str = str.substring(0, chars - 3) + "..."
-  }if(opt_protectEscapedCharacters) {
-    str = goog.string.htmlEscape(str)
-  }return str
-};
-goog.string.truncateMiddle = function(str, chars, opt_protectEscapedCharacters) {
-  if(opt_protectEscapedCharacters) {
-    str = goog.string.unescapeEntities(str)
-  }if(str.length > chars) {
-    var half = Math.floor(chars / 2);
-    var endPos = str.length - half;
-    half += chars % 2;
-    str = str.substring(0, half) + "..." + str.substring(endPos)
-  }if(opt_protectEscapedCharacters) {
-    str = goog.string.htmlEscape(str)
-  }return str
-};
-goog.string.specialEscapeChars_ = {"\u0000":"\\0", "\u0008":"\\b", "\u000c":"\\f", "\n":"\\n", "\r":"\\r", "\t":"\\t", "\u000b":"\\x0B", '"':'\\"', "\\":"\\\\"};
-goog.string.jsEscapeCache_ = {"'":"\\'"};
-goog.string.quote = function(s) {
-  s = String(s);
-  if(s.quote) {
-    return s.quote()
-  }else {
-    var sb = ['"'];
-    for(var i = 0;i < s.length;i++) {
-      var ch = s.charAt(i);
-      var cc = ch.charCodeAt(0);
-      sb[i + 1] = goog.string.specialEscapeChars_[ch] || (cc > 31 && cc < 127 ? ch : goog.string.escapeChar(ch))
-    }sb.push('"');
-    return sb.join("")
-  }
-};
-goog.string.escapeString = function(str) {
-  var sb = [];
-  for(var i = 0;i < str.length;i++) {
-    sb[i] = goog.string.escapeChar(str.charAt(i))
-  }return sb.join("")
-};
-goog.string.escapeChar = function(c) {
-  if(c in goog.string.jsEscapeCache_) {
-    return goog.string.jsEscapeCache_[c]
-  }if(c in goog.string.specialEscapeChars_) {
-    return goog.string.jsEscapeCache_[c] = goog.string.specialEscapeChars_[c]
-  }var rv = c;
-  var cc = c.charCodeAt(0);
-  if(cc > 31 && cc < 127) {
-    rv = c
-  }else {
-    if(cc < 256) {
-      rv = "\\x";
-      if(cc < 16 || cc > 256) {
-        rv += "0"
-      }
-    }else {
-      rv = "\\u";
-      if(cc < 4096) {
-        rv += "0"
-      }
-    }rv += cc.toString(16).toUpperCase()
-  }return goog.string.jsEscapeCache_[c] = rv
-};
-goog.string.toMap = function(s) {
-  var rv = {};
-  for(var i = 0;i < s.length;i++) {
-    rv[s.charAt(i)] = true
-  }return rv
-};
-goog.string.contains = function(s, ss) {
-  return s.indexOf(ss) != -1
-};
-goog.string.removeAt = function(s, index, stringLength) {
-  var resultStr = s;
-  if(index >= 0 && index < s.length && stringLength > 0) {
-    resultStr = s.substr(0, index) + s.substr(index + stringLength, s.length - index - stringLength)
-  }return resultStr
-};
-goog.string.remove = function(s, ss) {
-  var re = new RegExp(goog.string.regExpEscape(ss), "");
-  return s.replace(re, "")
-};
-goog.string.removeAll = function(s, ss) {
-  var re = new RegExp(goog.string.regExpEscape(ss), "g");
-  return s.replace(re, "")
-};
-goog.string.regExpEscape = function(s) {
-  return String(s).replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, "\\$1").replace(/\x08/g, "\\x08")
-};
-goog.string.repeat = function(string, length) {
-  return(new Array(length + 1)).join(string)
-};
-goog.string.padNumber = function(num, length, opt_precision) {
-  var s = goog.isDef(opt_precision) ? num.toFixed(opt_precision) : String(num);
-  var index = s.indexOf(".");
-  if(index == -1) {
-    index = s.length
-  }return goog.string.repeat("0", Math.max(0, length - index)) + s
-};
-goog.string.makeSafe = function(obj) {
-  return obj == null ? "" : String(obj)
-};
-goog.string.buildString = function(var_args) {
-  return Array.prototype.join.call(arguments, "")
-};
-goog.string.getRandomString = function() {
-  return Math.floor(Math.random() * 2147483648).toString(36) + (Math.floor(Math.random() * 2147483648) ^ goog.now()).toString(36)
-};
-goog.string.compareVersions = function(version1, version2) {
-  var order = 0;
-  var v1Subs = goog.string.trim(String(version1)).split(".");
-  var v2Subs = goog.string.trim(String(version2)).split(".");
-  var subCount = Math.max(v1Subs.length, v2Subs.length);
-  for(var subIdx = 0;order == 0 && subIdx < subCount;subIdx++) {
-    var v1Sub = v1Subs[subIdx] || "";
-    var v2Sub = v2Subs[subIdx] || "";
-    var v1CompParser = new RegExp("(\\d*)(\\D*)", "g");
-    var v2CompParser = new RegExp("(\\d*)(\\D*)", "g");
-    do {
-      var v1Comp = v1CompParser.exec(v1Sub) || ["", "", ""];
-      var v2Comp = v2CompParser.exec(v2Sub) || ["", "", ""];
-      if(v1Comp[0].length == 0 && v2Comp[0].length == 0) {
-        break
-      }var v1CompNum = v1Comp[1].length == 0 ? 0 : parseInt(v1Comp[1], 10);
-      var v2CompNum = v2Comp[1].length == 0 ? 0 : parseInt(v2Comp[1], 10);
-      order = goog.string.compareElements_(v1CompNum, v2CompNum) || goog.string.compareElements_(v1Comp[2].length == 0, v2Comp[2].length == 0) || goog.string.compareElements_(v1Comp[2], v2Comp[2])
-    }while(order == 0)
-  }return order
-};
-goog.string.compareElements_ = function(left, right) {
-  if(left < right) {
-    return-1
-  }else {
-    if(left > right) {
-      return 1
-    }
-  }return 0
-};
-goog.string.HASHCODE_MAX_ = 4294967296;
-goog.string.hashCode = function(str) {
-  var result = 0;
-  for(var i = 0;i < str.length;++i) {
-    result = 31 * result + str.charCodeAt(i);
-    result %= goog.string.HASHCODE_MAX_
-  }return result
-};
-goog.string.uniqueStringCounter_ = Math.random() * 2147483648 | 0;
-goog.string.createUniqueString = function() {
-  return"goog_" + goog.string.uniqueStringCounter_++
-};
-goog.string.toNumber = function(str) {
-  var num = Number(str);
-  if(num == 0 && goog.string.isEmpty(str)) {
-    return NaN
-  }return num
-};
-// Input 3
-goog.provide("goog.asserts");
-goog.provide("goog.asserts.AssertionError");
-goog.require("goog.debug.Error");
-goog.require("goog.string");
-goog.asserts.ENABLE_ASSERTS = goog.DEBUG;
-goog.asserts.AssertionError = function(messagePattern, messageArgs) {
-  messageArgs.unshift(messagePattern);
-  goog.debug.Error.call(this, goog.string.subs.apply(null, messageArgs));
-  messageArgs.shift();
-  this.messagePattern = messagePattern
-};
-goog.inherits(goog.asserts.AssertionError, goog.debug.Error);
-goog.asserts.AssertionError.prototype.name = "AssertionError";
-goog.asserts.doAssertFailure_ = function(defaultMessage, defaultArgs, givenMessage, givenArgs) {
-  var message = "Assertion failed";
-  if(givenMessage) {
-    message += ": " + givenMessage;
-    var args = givenArgs
-  }else {
-    if(defaultMessage) {
-      message += ": " + defaultMessage;
-      args = defaultArgs
-    }
-  }throw new goog.asserts.AssertionError("" + message, args || []);
-};
-goog.asserts.assert = function(condition, opt_message, var_args) {
-  if(goog.asserts.ENABLE_ASSERTS && !condition) {
-    goog.asserts.doAssertFailure_("", null, opt_message, Array.prototype.slice.call(arguments, 2))
-  }return condition
-};
-goog.asserts.fail = function(opt_message, var_args) {
-  if(goog.asserts.ENABLE_ASSERTS) {
-    throw new goog.asserts.AssertionError("Failure" + (opt_message ? ": " + opt_message : ""), Array.prototype.slice.call(arguments, 1));
-  }
-};
-goog.asserts.assertNumber = function(value, opt_message, var_args) {
-  if(goog.asserts.ENABLE_ASSERTS && !goog.isNumber(value)) {
-    goog.asserts.doAssertFailure_("Expected number but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2))
-  }return value
-};
-goog.asserts.assertString = function(value, opt_message, var_args) {
-  if(goog.asserts.ENABLE_ASSERTS && !goog.isString(value)) {
-    goog.asserts.doAssertFailure_("Expected string but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2))
-  }return value
-};
-goog.asserts.assertFunction = function(value, opt_message, var_args) {
-  if(goog.asserts.ENABLE_ASSERTS && !goog.isFunction(value)) {
-    goog.asserts.doAssertFailure_("Expected function but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2))
-  }return value
-};
-goog.asserts.assertObject = function(value, opt_message, var_args) {
-  if(goog.asserts.ENABLE_ASSERTS && !goog.isObject(value)) {
-    goog.asserts.doAssertFailure_("Expected object but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2))
-  }return value
-};
-goog.asserts.assertArray = function(value, opt_message, var_args) {
-  if(goog.asserts.ENABLE_ASSERTS && !goog.isArray(value)) {
-    goog.asserts.doAssertFailure_("Expected array but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2))
-  }return value
-};
-goog.asserts.assertBoolean = function(value, opt_message, var_args) {
-  if(goog.asserts.ENABLE_ASSERTS && !goog.isBoolean(value)) {
-    goog.asserts.doAssertFailure_("Expected boolean but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2))
-  }return value
-};
-goog.asserts.assertInstanceof = function(value, type, opt_message, var_args) {
-  if(goog.asserts.ENABLE_ASSERTS && !(value instanceof type)) {
-    goog.asserts.doAssertFailure_("instanceof check failed.", null, opt_message, Array.prototype.slice.call(arguments, 3))
-  }
-};
-// Input 4
 goog.provide("goog.array");
-goog.require("goog.asserts");
-goog.array.ArrayLike;
+goog.array.ArrayLike = goog.typedef;
 goog.array.peek = function(array) {
   return array[array.length - 1]
 };
 goog.array.ARRAY_PROTOTYPE_ = Array.prototype;
 goog.array.indexOf = goog.array.ARRAY_PROTOTYPE_.indexOf ? function(arr, obj, opt_fromIndex) {
-  goog.asserts.assert(arr.length != null);
   return goog.array.ARRAY_PROTOTYPE_.indexOf.call(arr, obj, opt_fromIndex)
 } : function(arr, obj, opt_fromIndex) {
   var fromIndex = opt_fromIndex == null ? 0 : opt_fromIndex < 0 ? Math.max(0, arr.length + opt_fromIndex) : opt_fromIndex;
@@ -853,7 +413,6 @@ goog.array.indexOf = goog.array.ARRAY_PROTOTYPE_.indexOf ? function(arr, obj, op
   }return-1
 };
 goog.array.lastIndexOf = goog.array.ARRAY_PROTOTYPE_.lastIndexOf ? function(arr, obj, opt_fromIndex) {
-  goog.asserts.assert(arr.length != null);
   var fromIndex = opt_fromIndex == null ? arr.length - 1 : opt_fromIndex;
   return goog.array.ARRAY_PROTOTYPE_.lastIndexOf.call(arr, obj, fromIndex)
 } : function(arr, obj, opt_fromIndex) {
@@ -871,7 +430,6 @@ goog.array.lastIndexOf = goog.array.ARRAY_PROTOTYPE_.lastIndexOf ? function(arr,
   }return-1
 };
 goog.array.forEach = goog.array.ARRAY_PROTOTYPE_.forEach ? function(arr, f, opt_obj) {
-  goog.asserts.assert(arr.length != null);
   goog.array.ARRAY_PROTOTYPE_.forEach.call(arr, f, opt_obj)
 } : function(arr, f, opt_obj) {
   var l = arr.length;
@@ -892,7 +450,6 @@ goog.array.forEachRight = function(arr, f, opt_obj) {
   }
 };
 goog.array.filter = goog.array.ARRAY_PROTOTYPE_.filter ? function(arr, f, opt_obj) {
-  goog.asserts.assert(arr.length != null);
   return goog.array.ARRAY_PROTOTYPE_.filter.call(arr, f, opt_obj)
 } : function(arr, f, opt_obj) {
   var l = arr.length;
@@ -909,7 +466,6 @@ goog.array.filter = goog.array.ARRAY_PROTOTYPE_.filter ? function(arr, f, opt_ob
   }return res
 };
 goog.array.map = goog.array.ARRAY_PROTOTYPE_.map ? function(arr, f, opt_obj) {
-  goog.asserts.assert(arr.length != null);
   return goog.array.ARRAY_PROTOTYPE_.map.call(arr, f, opt_obj)
 } : function(arr, f, opt_obj) {
   var l = arr.length;
@@ -948,7 +504,6 @@ goog.array.reduceRight = function(arr, f, val, opt_obj) {
   return rval
 };
 goog.array.some = goog.array.ARRAY_PROTOTYPE_.some ? function(arr, f, opt_obj) {
-  goog.asserts.assert(arr.length != null);
   return goog.array.ARRAY_PROTOTYPE_.some.call(arr, f, opt_obj)
 } : function(arr, f, opt_obj) {
   var l = arr.length;
@@ -960,7 +515,6 @@ goog.array.some = goog.array.ARRAY_PROTOTYPE_.some ? function(arr, f, opt_obj) {
   }return false
 };
 goog.array.every = goog.array.ARRAY_PROTOTYPE_.every ? function(arr, f, opt_obj) {
-  goog.asserts.assert(arr.length != null);
   return goog.array.ARRAY_PROTOTYPE_.every.call(arr, f, opt_obj)
 } : function(arr, f, opt_obj) {
   var l = arr.length;
@@ -1037,7 +591,6 @@ goog.array.remove = function(arr, obj) {
   }return rv
 };
 goog.array.removeAt = function(arr, i) {
-  goog.asserts.assert(arr.length != null);
   return goog.array.ARRAY_PROTOTYPE_.splice.call(arr, i, 1).length == 1
 };
 goog.array.removeIf = function(arr, f, opt_obj) {
@@ -1085,11 +638,9 @@ goog.array.extend = function(arr1, var_args) {
   }
 };
 goog.array.splice = function(arr, index, howMany, var_args) {
-  goog.asserts.assert(arr.length != null);
   return goog.array.ARRAY_PROTOTYPE_.splice.apply(arr, goog.array.slice(arguments, 1))
 };
 goog.array.slice = function(arr, start, opt_end) {
-  goog.asserts.assert(arr.length != null);
   if(arguments.length <= 2) {
     return goog.array.ARRAY_PROTOTYPE_.slice.call(arr, start)
   }else {
@@ -1109,32 +660,26 @@ goog.array.removeDuplicates = function(arr, opt_rv) {
   }rv.length = cursorInsert
 };
 goog.array.binarySearch = function(arr, target, opt_compareFn) {
-  return goog.array.binarySearch_(arr, opt_compareFn || goog.array.defaultCompare, false, target)
+  return goog.array.binarySelect(arr, goog.partial(opt_compareFn || goog.array.defaultCompare, target))
 };
 goog.array.binarySelect = function(arr, evaluator, opt_obj) {
-  return goog.array.binarySearch_(arr, evaluator, true, undefined, opt_obj)
-};
-goog.array.binarySearch_ = function(arr, compareFn, isEvaluator, opt_target, opt_selfObj) {
   var left = 0;
-  var right = arr.length;
-  var found;
-  while(left < right) {
-    var middle = left + right >> 1;
-    var compareResult;
-    if(isEvaluator) {
-      compareResult = compareFn.call(opt_selfObj, arr[middle], middle, arr)
+  var right = arr.length - 1;
+  while(left <= right) {
+    var mid = left + right >> 1;
+    var evalResult = evaluator.call(opt_obj, arr[mid], mid, arr);
+    if(evalResult > 0) {
+      left = mid + 1
     }else {
-      compareResult = compareFn(opt_target, arr[middle])
-    }if(compareResult > 0) {
-      left = middle + 1
-    }else {
-      right = middle;
-      found = !compareResult
+      if(evalResult < 0) {
+        right = mid - 1
+      }else {
+        return mid
+      }
     }
-  }return found ? left : ~left
+  }return-(left + 1)
 };
 goog.array.sort = function(arr, opt_compareFn) {
-  goog.asserts.assert(arr.length != null);
   goog.array.ARRAY_PROTOTYPE_.sort.call(arr, opt_compareFn || goog.array.defaultCompare)
 };
 goog.array.stableSort = function(arr, opt_compareFn) {
@@ -1215,7 +760,6 @@ goog.array.flatten = function(var_args) {
   }return result
 };
 goog.array.rotate = function(array, n) {
-  goog.asserts.assert(array.length != null);
   if(array.length) {
     n %= array.length;
     if(n > 0) {
@@ -1227,26 +771,12 @@ goog.array.rotate = function(array, n) {
     }
   }return array
 };
-goog.array.zip = function(var_args) {
-  if(!arguments.length) {
-    return[]
-  }var result = [];
-  for(var i = 0;true;i++) {
-    var value = [];
-    for(var j = 0;j < arguments.length;j++) {
-      var arr = arguments[j];
-      if(i >= arr.length) {
-        return result
-      }value.push(arr[i])
-    }result.push(value)
-  }
-};
-// Input 5
+// Input 2
 goog.provide("goog.iter");
 goog.provide("goog.iter.Iterator");
 goog.provide("goog.iter.StopIteration");
 goog.require("goog.array");
-goog.iter.Iterable;
+goog.iter.Iterable = goog.typedef;
 if("StopIteration" in goog.global) {
   goog.iter.StopIteration = goog.global["StopIteration"]
 }else {
@@ -1494,7 +1024,7 @@ goog.iter.nextOrValue = function(iterable, defaultValue) {
     }return defaultValue
   }
 };
-// Input 6
+// Input 3
 goog.provide("goog.object");
 goog.object.forEach = function(obj, f, opt_obj) {
   for(var key in obj) {
@@ -1663,7 +1193,7 @@ goog.object.createSet = function(var_args) {
     rv[arguments[i]] = true
   }return rv
 };
-// Input 7
+// Input 4
 goog.provide("goog.structs");
 goog.require("goog.array");
 goog.require("goog.object");
@@ -1817,7 +1347,7 @@ goog.structs.every = function(col, f, opt_obj) {
     }
   }return true
 };
-// Input 8
+// Input 5
 goog.provide("goog.structs.Map");
 goog.require("goog.iter.Iterator");
 goog.require("goog.iter.StopIteration");
@@ -1960,14 +1490,6 @@ goog.structs.Map.prototype.transpose = function() {
     transposed.set(value, key)
   }return transposed
 };
-goog.structs.Map.prototype.toObject = function() {
-  this.cleanupKeysArray_();
-  var obj = {};
-  for(var i = 0;i < this.keys_.length;i++) {
-    var key = this.keys_[i];
-    obj[key] = this.map_[key]
-  }return obj
-};
 goog.structs.Map.prototype.getKeyIterator = function() {
   return this.__iterator__(true)
 };
@@ -1997,7 +1519,353 @@ goog.structs.Map.prototype.__iterator__ = function(opt_keys) {
 goog.structs.Map.hasKey_ = function(obj, key) {
   return Object.prototype.hasOwnProperty.call(obj, key)
 };
-// Input 9
+// Input 6
+goog.provide("goog.string");
+goog.provide("goog.string.Unicode");
+goog.string.Unicode = {NBSP:"\u00a0"};
+goog.string.startsWith = function(str, prefix) {
+  return str.lastIndexOf(prefix, 0) == 0
+};
+goog.string.endsWith = function(str, suffix) {
+  var l = str.length - suffix.length;
+  return l >= 0 && str.indexOf(suffix, l) == l
+};
+goog.string.caseInsensitiveStartsWith = function(str, prefix) {
+  return goog.string.caseInsensitiveCompare(prefix, str.substr(0, prefix.length)) == 0
+};
+goog.string.caseInsensitiveEndsWith = function(str, suffix) {
+  return goog.string.caseInsensitiveCompare(suffix, str.substr(str.length - suffix.length, suffix.length)) == 0
+};
+goog.string.subs = function(str, var_args) {
+  for(var i = 1;i < arguments.length;i++) {
+    var replacement = String(arguments[i]).replace(/\$/g, "$$$$");
+    str = str.replace(/\%s/, replacement)
+  }return str
+};
+goog.string.collapseWhitespace = function(str) {
+  return str.replace(/[\s\xa0]+/g, " ").replace(/^\s+|\s+$/g, "")
+};
+goog.string.isEmpty = function(str) {
+  return/^[\s\xa0]*$/.test(str)
+};
+goog.string.isEmptySafe = function(str) {
+  return goog.string.isEmpty(goog.string.makeSafe(str))
+};
+goog.string.isBreakingWhitespace = function(str) {
+  return!/[^\t\n\r ]/.test(str)
+};
+goog.string.isAlpha = function(str) {
+  return!/[^a-zA-Z]/.test(str)
+};
+goog.string.isNumeric = function(str) {
+  return!/[^0-9]/.test(str)
+};
+goog.string.isAlphaNumeric = function(str) {
+  return!/[^a-zA-Z0-9]/.test(str)
+};
+goog.string.isSpace = function(ch) {
+  return ch == " "
+};
+goog.string.isUnicodeChar = function(ch) {
+  return ch.length == 1 && ch >= " " && ch <= "~" || ch >= "\u0080" && ch <= "\ufffd"
+};
+goog.string.stripNewlines = function(str) {
+  return str.replace(/(\r\n|\r|\n)+/g, " ")
+};
+goog.string.canonicalizeNewlines = function(str) {
+  return str.replace(/(\r\n|\r|\n)/g, "\n")
+};
+goog.string.normalizeWhitespace = function(str) {
+  return str.replace(/\xa0|\s/g, " ")
+};
+goog.string.normalizeSpaces = function(str) {
+  return str.replace(/\xa0|[ \t]+/g, " ")
+};
+goog.string.trim = function(str) {
+  return str.replace(/^[\s\xa0]+|[\s\xa0]+$/g, "")
+};
+goog.string.trimLeft = function(str) {
+  return str.replace(/^[\s\xa0]+/, "")
+};
+goog.string.trimRight = function(str) {
+  return str.replace(/[\s\xa0]+$/, "")
+};
+goog.string.caseInsensitiveCompare = function(str1, str2) {
+  var test1 = String(str1).toLowerCase();
+  var test2 = String(str2).toLowerCase();
+  if(test1 < test2) {
+    return-1
+  }else {
+    if(test1 == test2) {
+      return 0
+    }else {
+      return 1
+    }
+  }
+};
+goog.string.numerateCompareRegExp_ = /(\.\d+)|(\d+)|(\D+)/g;
+goog.string.numerateCompare = function(str1, str2) {
+  if(str1 == str2) {
+    return 0
+  }if(!str1) {
+    return-1
+  }if(!str2) {
+    return 1
+  }var tokens1 = str1.toLowerCase().match(goog.string.numerateCompareRegExp_);
+  var tokens2 = str2.toLowerCase().match(goog.string.numerateCompareRegExp_);
+  var count = Math.min(tokens1.length, tokens2.length);
+  for(var i = 0;i < count;i++) {
+    var a = tokens1[i];
+    var b = tokens2[i];
+    if(a != b) {
+      var num1 = parseInt(a, 10);
+      if(!isNaN(num1)) {
+        var num2 = parseInt(b, 10);
+        if(!isNaN(num2) && num1 - num2) {
+          return num1 - num2
+        }
+      }return a < b ? -1 : 1
+    }
+  }if(tokens1.length != tokens2.length) {
+    return tokens1.length - tokens2.length
+  }return str1 < str2 ? -1 : 1
+};
+goog.string.encodeUriRegExp_ = /^[a-zA-Z0-9\-_.!~*'()]*$/;
+goog.string.urlEncode = function(str) {
+  str = String(str);
+  if(!goog.string.encodeUriRegExp_.test(str)) {
+    return encodeURIComponent(str)
+  }return str
+};
+goog.string.urlDecode = function(str) {
+  return decodeURIComponent(str.replace(/\+/g, " "))
+};
+goog.string.newLineToBr = function(str, opt_xml) {
+  return str.replace(/(\r\n|\r|\n)/g, opt_xml ? "<br />" : "<br>")
+};
+goog.string.htmlEscape = function(str, opt_isLikelyToContainHtmlChars) {
+  if(opt_isLikelyToContainHtmlChars) {
+    return str.replace(goog.string.amperRe_, "&amp;").replace(goog.string.ltRe_, "&lt;").replace(goog.string.gtRe_, "&gt;").replace(goog.string.quotRe_, "&quot;")
+  }else {
+    if(!goog.string.allRe_.test(str)) {
+      return str
+    }if(str.indexOf("&") != -1) {
+      str = str.replace(goog.string.amperRe_, "&amp;")
+    }if(str.indexOf("<") != -1) {
+      str = str.replace(goog.string.ltRe_, "&lt;")
+    }if(str.indexOf(">") != -1) {
+      str = str.replace(goog.string.gtRe_, "&gt;")
+    }if(str.indexOf('"') != -1) {
+      str = str.replace(goog.string.quotRe_, "&quot;")
+    }return str
+  }
+};
+goog.string.amperRe_ = /&/g;
+goog.string.ltRe_ = /</g;
+goog.string.gtRe_ = />/g;
+goog.string.quotRe_ = /\"/g;
+goog.string.allRe_ = /[&<>\"]/;
+goog.string.unescapeEntities = function(str) {
+  if(goog.string.contains(str, "&")) {
+    if("document" in goog.global && !goog.string.contains(str, "<")) {
+      return goog.string.unescapeEntitiesUsingDom_(str)
+    }else {
+      return goog.string.unescapePureXmlEntities_(str)
+    }
+  }return str
+};
+goog.string.unescapeEntitiesUsingDom_ = function(str) {
+  var el = goog.global["document"]["createElement"]("a");
+  el["innerHTML"] = str;
+  if(el[goog.string.NORMALIZE_FN_]) {
+    el[goog.string.NORMALIZE_FN_]()
+  }str = el["firstChild"]["nodeValue"];
+  el["innerHTML"] = "";
+  return str
+};
+goog.string.unescapePureXmlEntities_ = function(str) {
+  return str.replace(/&([^;]+);/g, function(s, entity) {
+    switch(entity) {
+      case "amp":
+        return"&";
+      case "lt":
+        return"<";
+      case "gt":
+        return">";
+      case "quot":
+        return'"';
+      default:
+        if(entity.charAt(0) == "#") {
+          var n = Number("0" + entity.substr(1));
+          if(!isNaN(n)) {
+            return String.fromCharCode(n)
+          }
+        }return s
+    }
+  })
+};
+goog.string.NORMALIZE_FN_ = "normalize";
+goog.string.whitespaceEscape = function(str, opt_xml) {
+  return goog.string.newLineToBr(str.replace(/  /g, " &#160;"), opt_xml)
+};
+goog.string.stripQuotes = function(str, quoteChars) {
+  var length = quoteChars.length;
+  for(var i = 0;i < length;i++) {
+    var quoteChar = length == 1 ? quoteChars : quoteChars.charAt(i);
+    if(str.charAt(0) == quoteChar && str.charAt(str.length - 1) == quoteChar) {
+      return str.substring(1, str.length - 1)
+    }
+  }return str
+};
+goog.string.truncate = function(str, chars, opt_protectEscapedCharacters) {
+  if(opt_protectEscapedCharacters) {
+    str = goog.string.unescapeEntities(str)
+  }if(str.length > chars) {
+    str = str.substring(0, chars - 3) + "..."
+  }if(opt_protectEscapedCharacters) {
+    str = goog.string.htmlEscape(str)
+  }return str
+};
+goog.string.truncateMiddle = function(str, chars, opt_protectEscapedCharacters) {
+  if(opt_protectEscapedCharacters) {
+    str = goog.string.unescapeEntities(str)
+  }if(str.length > chars) {
+    var half = Math.floor(chars / 2);
+    var endPos = str.length - half;
+    half += chars % 2;
+    str = str.substring(0, half) + "..." + str.substring(endPos)
+  }if(opt_protectEscapedCharacters) {
+    str = goog.string.htmlEscape(str)
+  }return str
+};
+goog.string.jsEscapeCache_ = {"\u0008":"\\b", "\u000c":"\\f", "\n":"\\n", "\r":"\\r", "\t":"\\t", "\u000b":"\\x0B", '"':'\\"', "'":"\\'", "\\":"\\\\"};
+goog.string.quote = function(s) {
+  s = String(s);
+  if(s.quote) {
+    return s.quote()
+  }else {
+    var sb = ['"'];
+    for(var i = 0;i < s.length;i++) {
+      sb[i + 1] = goog.string.escapeChar(s.charAt(i))
+    }sb.push('"');
+    return sb.join("")
+  }
+};
+goog.string.escapeChar = function(c) {
+  if(c in goog.string.jsEscapeCache_) {
+    return goog.string.jsEscapeCache_[c]
+  }var rv = c;
+  var cc = c.charCodeAt(0);
+  if(cc > 31 && cc < 127) {
+    rv = c
+  }else {
+    if(cc < 256) {
+      rv = "\\x";
+      if(cc < 16 || cc > 256) {
+        rv += "0"
+      }
+    }else {
+      rv = "\\u";
+      if(cc < 4096) {
+        rv += "0"
+      }
+    }rv += cc.toString(16).toUpperCase()
+  }return goog.string.jsEscapeCache_[c] = rv
+};
+goog.string.toMap = function(s) {
+  var rv = {};
+  for(var i = 0;i < s.length;i++) {
+    rv[s.charAt(i)] = true
+  }return rv
+};
+goog.string.contains = function(s, ss) {
+  return s.indexOf(ss) != -1
+};
+goog.string.removeAt = function(s, index, stringLength) {
+  var resultStr = s;
+  if(index >= 0 && index < s.length && stringLength > 0) {
+    resultStr = s.substr(0, index) + s.substr(index + stringLength, s.length - index - stringLength)
+  }return resultStr
+};
+goog.string.remove = function(s, ss) {
+  var re = new RegExp(goog.string.regExpEscape(ss), "");
+  return s.replace(re, "")
+};
+goog.string.removeAll = function(s, ss) {
+  var re = new RegExp(goog.string.regExpEscape(ss), "g");
+  return s.replace(re, "")
+};
+goog.string.regExpEscape = function(s) {
+  return String(s).replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, "\\$1").replace(/\x08/g, "\\x08")
+};
+goog.string.repeat = function(string, length) {
+  return(new Array(length + 1)).join(string)
+};
+goog.string.padNumber = function(num, length, opt_precision) {
+  var s = goog.isDef(opt_precision) ? num.toFixed(opt_precision) : String(num);
+  var index = s.indexOf(".");
+  if(index == -1) {
+    index = s.length
+  }return goog.string.repeat("0", Math.max(0, length - index)) + s
+};
+goog.string.makeSafe = function(obj) {
+  return obj == null ? "" : String(obj)
+};
+goog.string.buildString = function(var_args) {
+  return Array.prototype.join.call(arguments, "")
+};
+goog.string.getRandomString = function() {
+  return Math.floor(Math.random() * 2147483648).toString(36) + (Math.floor(Math.random() * 2147483648) ^ goog.now()).toString(36)
+};
+goog.string.compareVersions = function(version1, version2) {
+  var order = 0;
+  var v1Subs = goog.string.trim(String(version1)).split(".");
+  var v2Subs = goog.string.trim(String(version2)).split(".");
+  var subCount = Math.max(v1Subs.length, v2Subs.length);
+  for(var subIdx = 0;order == 0 && subIdx < subCount;subIdx++) {
+    var v1Sub = v1Subs[subIdx] || "";
+    var v2Sub = v2Subs[subIdx] || "";
+    var v1CompParser = new RegExp("(\\d*)(\\D*)", "g");
+    var v2CompParser = new RegExp("(\\d*)(\\D*)", "g");
+    do {
+      var v1Comp = v1CompParser.exec(v1Sub) || ["", "", ""];
+      var v2Comp = v2CompParser.exec(v2Sub) || ["", "", ""];
+      if(v1Comp[0].length == 0 && v2Comp[0].length == 0) {
+        break
+      }var v1CompNum = v1Comp[1].length == 0 ? 0 : parseInt(v1Comp[1], 10);
+      var v2CompNum = v2Comp[1].length == 0 ? 0 : parseInt(v2Comp[1], 10);
+      order = goog.string.compareElements_(v1CompNum, v2CompNum) || goog.string.compareElements_(v1Comp[2].length == 0, v2Comp[2].length == 0) || goog.string.compareElements_(v1Comp[2], v2Comp[2])
+    }while(order == 0)
+  }return order
+};
+goog.string.compareElements_ = function(left, right) {
+  if(left < right) {
+    return-1
+  }else {
+    if(left > right) {
+      return 1
+    }
+  }return 0
+};
+goog.string.HASHCODE_MAX_ = 4294967296;
+goog.string.hashCode = function(str) {
+  var result = 0;
+  for(var i = 0;i < str.length;++i) {
+    result = 31 * result + str.charCodeAt(i);
+    result %= goog.string.HASHCODE_MAX_
+  }return result
+};
+goog.string.uniqueStringCounter_ = Math.random() * 2147483648 | 0;
+goog.string.createUniqueString = function() {
+  return"goog_" + goog.string.uniqueStringCounter_++
+};
+goog.string.toNumber = function(str) {
+  var num = Number(str);
+  if(num == 0 && goog.string.isEmpty(str)) {
+    return NaN
+  }return num
+};
+// Input 7
 goog.provide("goog.structs.Set");
 goog.require("goog.structs");
 goog.require("goog.structs.Map");
@@ -2082,7 +1950,7 @@ goog.structs.Set.prototype.isSubsetOf = function(col) {
 goog.structs.Set.prototype.__iterator__ = function(opt_keys) {
   return this.map_.__iterator__(false)
 };
-// Input 10
+// Input 8
 goog.provide("goog.debug");
 goog.require("goog.array");
 goog.require("goog.string");
@@ -2093,7 +1961,8 @@ goog.debug.catchErrors = function(logFunc, opt_cancel, opt_target) {
   target.onerror = function(message, url, line) {
     if(oldErrorHandler) {
       oldErrorHandler(message, url, line)
-    }logFunc({message:message, fileName:url, line:line});
+    }var file = String(url).split(/[\/\\]/).pop();
+    logFunc({message:message, fileName:file, line:line});
     return Boolean(opt_cancel)
   }
 };
@@ -2296,30 +2165,18 @@ goog.debug.makeWhitespaceVisible = function(string) {
   return string.replace(/ /g, "[_]").replace(/\f/g, "[f]").replace(/\n/g, "[n]\n").replace(/\r/g, "[r]").replace(/\t/g, "[t]")
 };
 goog.debug.fnNameCache_ = {};
-// Input 11
+// Input 9
 goog.provide("goog.debug.LogRecord");
 goog.debug.LogRecord = function(level, msg, loggerName, opt_time, opt_sequenceNumber) {
-  this.reset(level, msg, loggerName, opt_time, opt_sequenceNumber)
-};
-goog.debug.LogRecord.prototype.time_;
-goog.debug.LogRecord.prototype.level_;
-goog.debug.LogRecord.prototype.msg_;
-goog.debug.LogRecord.prototype.loggerName_;
-goog.debug.LogRecord.prototype.sequenceNumber_ = 0;
-goog.debug.LogRecord.prototype.exception_ = null;
-goog.debug.LogRecord.prototype.exceptionText_ = null;
-goog.debug.LogRecord.ENABLE_SEQUENCE_NUMBERS = true;
-goog.debug.LogRecord.nextSequenceNumber_ = 0;
-goog.debug.LogRecord.prototype.reset = function(level, msg, loggerName, opt_time, opt_sequenceNumber) {
-  if(goog.debug.LogRecord.ENABLE_SEQUENCE_NUMBERS) {
-    this.sequenceNumber_ = typeof opt_sequenceNumber == "number" ? opt_sequenceNumber : goog.debug.LogRecord.nextSequenceNumber_++
-  }this.time_ = opt_time || goog.now();
+  this.sequenceNumber_ = typeof opt_sequenceNumber == "number" ? opt_sequenceNumber : goog.debug.LogRecord.nextSequenceNumber_++;
+  this.time_ = opt_time || goog.now();
   this.level_ = level;
   this.msg_ = msg;
-  this.loggerName_ = loggerName;
-  delete this.exception_;
-  delete this.exceptionText_
+  this.loggerName_ = loggerName
 };
+goog.debug.LogRecord.prototype.exception_ = null;
+goog.debug.LogRecord.prototype.exceptionText_ = null;
+goog.debug.LogRecord.nextSequenceNumber_ = 0;
 goog.debug.LogRecord.prototype.getLoggerName = function() {
   return this.loggerName_
 };
@@ -2359,60 +2216,12 @@ goog.debug.LogRecord.prototype.setMillis = function(time) {
 goog.debug.LogRecord.prototype.getSequenceNumber = function() {
   return this.sequenceNumber_
 };
-// Input 12
-goog.provide("goog.debug.LogBuffer");
-goog.require("goog.asserts");
-goog.require("goog.debug.LogRecord");
-goog.debug.LogBuffer = function() {
-  goog.asserts.assert(goog.debug.LogBuffer.isBufferingEnabled(), "Cannot use goog.debug.LogBuffer without defining " + "goog.debug.LogBuffer.CAPACITY.");
-  this.clear()
-};
-goog.debug.LogBuffer.getInstance = function() {
-  if(!goog.debug.LogBuffer.instance_) {
-    goog.debug.LogBuffer.instance_ = new goog.debug.LogBuffer
-  }return goog.debug.LogBuffer.instance_
-};
-goog.debug.LogBuffer.CAPACITY = 0;
-goog.debug.LogBuffer.prototype.buffer_;
-goog.debug.LogBuffer.prototype.curIndex_;
-goog.debug.LogBuffer.prototype.isFull_;
-goog.debug.LogBuffer.prototype.addRecord = function(level, msg, loggerName) {
-  var curIndex = (this.curIndex_ + 1) % goog.debug.LogBuffer.CAPACITY;
-  this.curIndex_ = curIndex;
-  if(this.isFull_) {
-    var ret = this.buffer_[curIndex];
-    ret.reset(level, msg, loggerName);
-    return ret
-  }this.isFull_ = curIndex == goog.debug.LogBuffer.CAPACITY - 1;
-  return this.buffer_[curIndex] = new goog.debug.LogRecord(level, msg, loggerName)
-};
-goog.debug.LogBuffer.isBufferingEnabled = function() {
-  return goog.debug.LogBuffer.CAPACITY > 0
-};
-goog.debug.LogBuffer.prototype.clear = function() {
-  this.buffer_ = new Array(goog.debug.LogBuffer.CAPACITY);
-  this.curIndex_ = -1;
-  this.isFull_ = false
-};
-goog.debug.LogBuffer.prototype.forEachRecord = function(func) {
-  var buffer = this.buffer_;
-  if(!buffer[0]) {
-    return
-  }var curIndex = this.curIndex_;
-  var i = this.isFull_ ? curIndex : -1;
-  do {
-    i = (i + 1) % goog.debug.LogBuffer.CAPACITY;
-    func(buffer[i])
-  }while(i != curIndex)
-};
-// Input 13
+// Input 10
 goog.provide("goog.debug.LogManager");
 goog.provide("goog.debug.Logger");
 goog.provide("goog.debug.Logger.Level");
 goog.require("goog.array");
-goog.require("goog.asserts");
 goog.require("goog.debug");
-goog.require("goog.debug.LogBuffer");
 goog.require("goog.debug.LogRecord");
 goog.debug.Logger = function(name) {
   this.name_ = name
@@ -2421,11 +2230,7 @@ goog.debug.Logger.prototype.parent_ = null;
 goog.debug.Logger.prototype.level_ = null;
 goog.debug.Logger.prototype.children_ = null;
 goog.debug.Logger.prototype.handlers_ = null;
-goog.debug.Logger.ENABLE_HIERARCHY = true;
-if(!goog.debug.Logger.ENABLE_HIERARCHY) {
-  goog.debug.Logger.rootHandlers_ = [];
-  goog.debug.Logger.rootLevel_
-}goog.debug.Logger.Level = function(name, value) {
+goog.debug.Logger.Level = function(name, value) {
   this.name = name;
   this.value = value
 };
@@ -2475,18 +2280,12 @@ goog.debug.Logger.prototype.getName = function() {
   return this.name_
 };
 goog.debug.Logger.prototype.addHandler = function(handler) {
-  if(goog.debug.Logger.ENABLE_HIERARCHY) {
-    if(!this.handlers_) {
-      this.handlers_ = []
-    }this.handlers_.push(handler)
-  }else {
-    goog.asserts.assert(!this.name_, "Cannot call addHandler on a non-root logger when " + "goog.debug.Logger.ENABLE_HIERARCHY is false.");
-    goog.debug.Logger.rootHandlers_.push(handler)
-  }
+  if(!this.handlers_) {
+    this.handlers_ = []
+  }this.handlers_.push(handler)
 };
 goog.debug.Logger.prototype.removeHandler = function(handler) {
-  var handlers = goog.debug.Logger.ENABLE_HIERARCHY ? this.handlers_ : goog.debug.Logger.rootHandlers_;
-  return!!handlers && goog.array.remove(handlers, handler)
+  return!!this.handlers_ && goog.array.remove(this.handlers_, handler)
 };
 goog.debug.Logger.prototype.getParent = function() {
   return this.parent_
@@ -2497,28 +2296,24 @@ goog.debug.Logger.prototype.getChildren = function() {
   }return this.children_
 };
 goog.debug.Logger.prototype.setLevel = function(level) {
-  if(goog.debug.Logger.ENABLE_HIERARCHY) {
-    this.level_ = level
-  }else {
-    goog.asserts.assert(!this.name_, "Cannot call setLevel() on a non-root logger when " + "goog.debug.Logger.ENABLE_HIERARCHY is false.");
-    goog.debug.Logger.rootLevel_ = level
-  }
+  this.level_ = level
 };
 goog.debug.Logger.prototype.getLevel = function() {
   return this.level_
 };
 goog.debug.Logger.prototype.getEffectiveLevel = function() {
-  if(!goog.debug.Logger.ENABLE_HIERARCHY) {
-    return goog.debug.Logger.rootLevel_
-  }if(this.level_) {
+  if(this.level_) {
     return this.level_
   }if(this.parent_) {
     return this.parent_.getEffectiveLevel()
-  }goog.asserts.fail("Root logger has no level set.");
-  return null
+  }return null
 };
 goog.debug.Logger.prototype.isLoggable = function(level) {
-  return level.value >= this.getEffectiveLevel().value
+  if(this.level_) {
+    return level.value >= this.level_.value
+  }if(this.parent_) {
+    return this.parent_.isLoggable(level)
+  }return false
 };
 goog.debug.Logger.prototype.log = function(level, msg, opt_exception) {
   if(this.isLoggable(level)) {
@@ -2526,11 +2321,8 @@ goog.debug.Logger.prototype.log = function(level, msg, opt_exception) {
   }
 };
 goog.debug.Logger.prototype.getLogRecord = function(level, msg, opt_exception) {
-  if(goog.debug.LogBuffer.isBufferingEnabled()) {
-    var logRecord = goog.debug.LogBuffer.getInstance().addRecord(level, msg, this.name_)
-  }else {
-    logRecord = new goog.debug.LogRecord(level, String(msg), this.name_)
-  }if(opt_exception) {
+  var logRecord = new goog.debug.LogRecord(level, String(msg), this.name_);
+  if(opt_exception) {
     logRecord.setException(opt_exception);
     logRecord.setExceptionText(goog.debug.exposeException(opt_exception, arguments.callee.caller))
   }return logRecord
@@ -2565,16 +2357,10 @@ goog.debug.Logger.prototype.logRecord = function(logRecord) {
   }
 };
 goog.debug.Logger.prototype.doLogRecord_ = function(logRecord) {
-  if(goog.debug.Logger.ENABLE_HIERARCHY) {
-    var target = this;
-    while(target) {
-      target.callPublish_(logRecord);
-      target = target.getParent()
-    }
-  }else {
-    for(var i = 0, handler;handler = goog.debug.Logger.rootHandlers_[i++];) {
-      handler(logRecord)
-    }
+  var target = this;
+  while(target) {
+    target.callPublish_(logRecord);
+    target = target.getParent()
   }
 };
 goog.debug.Logger.prototype.callPublish_ = function(logRecord) {
@@ -2620,17 +2406,16 @@ goog.debug.LogManager.createFunctionForCatchErrors = function(opt_logger) {
 };
 goog.debug.LogManager.createLogger_ = function(name) {
   var logger = new goog.debug.Logger(name);
-  if(goog.debug.Logger.ENABLE_HIERARCHY) {
-    var lastDotIndex = name.lastIndexOf(".");
-    var parentName = name.substr(0, lastDotIndex);
-    var leafName = name.substr(lastDotIndex + 1);
-    var parentLogger = goog.debug.LogManager.getLogger(parentName);
-    parentLogger.addChild_(leafName, logger);
-    logger.setParent_(parentLogger)
-  }goog.debug.LogManager.loggers_[name] = logger;
+  var lastDotIndex = name.lastIndexOf(".");
+  var parentName = name.substr(0, lastDotIndex);
+  var leafName = name.substr(lastDotIndex + 1);
+  var parentLogger = goog.debug.LogManager.getLogger(parentName);
+  parentLogger.addChild_(leafName, logger);
+  logger.setParent_(parentLogger);
+  goog.debug.LogManager.loggers_[name] = logger;
   return logger
 };
-// Input 14
+// Input 11
 goog.provide("kemia.view.Renderer");
 goog.require("goog.structs.Map");
 goog.require("goog.debug.Logger");
@@ -2658,7 +2443,7 @@ kemia.view.Renderer.prototype.buildTransform = function(fromBox) {
 kemia.view.Renderer.prototype.setTransform = function(transform) {
   this.transform = transform
 };
-// Input 15
+// Input 12
 goog.provide("kemia.math.Triangle");
 kemia.math.Triangle = function(a, b, c) {
   this.a = a;
@@ -2668,7 +2453,7 @@ kemia.math.Triangle = function(a, b, c) {
 kemia.math.Triangle.signedArea = function(a, b, c) {
   return(b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)
 };
-// Input 16
+// Input 13
 goog.provide("goog.math.Coordinate");
 goog.math.Coordinate = function(opt_x, opt_y) {
   this.x = goog.isDef(opt_x) ? opt_x : 0;
@@ -2704,7 +2489,7 @@ goog.math.Coordinate.difference = function(a, b) {
 goog.math.Coordinate.sum = function(a, b) {
   return new goog.math.Coordinate(a.x + b.x, a.y + b.y)
 };
-// Input 17
+// Input 14
 goog.provide("kemia.math.Line");
 goog.require("kemia.math.Triangle");
 goog.require("goog.math.Coordinate");
@@ -2719,7 +2504,7 @@ kemia.math.Line.prototype.getTheta = function() {
 kemia.math.Line.prototype.isSameSide = function(point1, point2) {
   return kemia.math.Triangle.signedArea(this.source, this.target, point1) * kemia.math.Triangle.signedArea(this.source, this.target, point2) > 0
 };
-// Input 18
+// Input 15
 goog.provide("kemia.view.BondRenderer");
 goog.require("kemia.view.Renderer");
 goog.require("kemia.math.Line");
@@ -2768,10 +2553,306 @@ kemia.view.BondRenderer.getTheta = function(bond) {
 kemia.view.BondRenderer.hasSymbol = function(atom) {
   return atom.symbol != "C" || atom.countBonds() == 1
 };
-kemia.view.BondRenderer.defaultConfig = {bond:{stroke:{width:2, color:"black"}, fill:{color:"black"}, "width-ratio":6, "symbol-space":0.3}, highlight:{radius:0.3, color:"blue"}};
+kemia.view.BondRenderer.defaultConfig = {bond:{stroke:{width:1.5, color:"black"}, fill:{color:"black"}, "width-ratio":6, "symbol-space":0.3, "triple-dist":0.15, "quad-dist":0.13}, highlight:{radius:0.3, color:"blue"}};
+// Input 16
+goog.provide("goog.math.Box");
+goog.require("goog.math.Coordinate");
+goog.math.Box = function(top, right, bottom, left) {
+  this.top = top;
+  this.right = right;
+  this.bottom = bottom;
+  this.left = left
+};
+goog.math.Box.boundingBox = function(var_args) {
+  var box = new goog.math.Box(arguments[0].y, arguments[0].x, arguments[0].y, arguments[0].x);
+  for(var i = 1;i < arguments.length;i++) {
+    var coord = arguments[i];
+    box.top = Math.min(box.top, coord.y);
+    box.right = Math.max(box.right, coord.x);
+    box.bottom = Math.max(box.bottom, coord.y);
+    box.left = Math.min(box.left, coord.x)
+  }return box
+};
+goog.math.Box.prototype.clone = function() {
+  return new goog.math.Box(this.top, this.right, this.bottom, this.left)
+};
+if(goog.DEBUG) {
+  goog.math.Box.prototype.toString = function() {
+    return"(" + this.top + "t, " + this.right + "r, " + this.bottom + "b, " + this.left + "l)"
+  }
+}goog.math.Box.prototype.contains = function(other) {
+  return goog.math.Box.contains(this, other)
+};
+goog.math.Box.prototype.expand = function(top, opt_right, opt_bottom, opt_left) {
+  if(goog.isObject(top)) {
+    this.top -= top.top;
+    this.right += top.right;
+    this.bottom += top.bottom;
+    this.left -= top.left
+  }else {
+    this.top -= top;
+    this.right += opt_right;
+    this.bottom += opt_bottom;
+    this.left -= opt_left
+  }return this
+};
+goog.math.Box.prototype.expandToInclude = function(box) {
+  this.left = Math.min(this.left, box.left);
+  this.top = Math.min(this.top, box.top);
+  this.right = Math.max(this.right, box.right);
+  this.bottom = Math.max(this.bottom, box.bottom)
+};
+goog.math.Box.equals = function(a, b) {
+  if(a == b) {
+    return true
+  }if(!a || !b) {
+    return false
+  }return a.top == b.top && a.right == b.right && a.bottom == b.bottom && a.left == b.left
+};
+goog.math.Box.contains = function(box, other) {
+  if(!box || !other) {
+    return false
+  }if(other instanceof goog.math.Box) {
+    return other.left >= box.left && other.right <= box.right && other.top >= box.top && other.bottom <= box.bottom
+  }return other.x >= box.left && other.x <= box.right && other.y >= box.top && other.y <= box.bottom
+};
+goog.math.Box.distance = function(box, coord) {
+  if(coord.x >= box.left && coord.x <= box.right) {
+    if(coord.y >= box.top && coord.y <= box.bottom) {
+      return 0
+    }return coord.y < box.top ? box.top - coord.y : coord.y - box.bottom
+  }if(coord.y >= box.top && coord.y <= box.bottom) {
+    return coord.x < box.left ? box.left - coord.x : coord.x - box.right
+  }return goog.math.Coordinate.distance(coord, new goog.math.Coordinate(coord.x < box.left ? box.left : box.right, coord.y < box.top ? box.top : box.bottom))
+};
+goog.math.Box.intersects = function(a, b) {
+  return a.left <= b.right && b.left <= a.right && a.top <= b.bottom && b.top <= a.bottom
+};
+// Input 17
+goog.provide("goog.math.Range");
+goog.math.Range = function(a, b) {
+  a = Number(a);
+  b = Number(b);
+  this.start = a < b ? a : b;
+  this.end = a < b ? b : a
+};
+goog.math.Range.prototype.clone = function() {
+  return new goog.math.Range(this.start, this.end)
+};
+if(goog.DEBUG) {
+  goog.math.Range.prototype.toString = function() {
+    return"[" + this.start + ", " + this.end + "]"
+  }
+}goog.math.Range.equals = function(a, b) {
+  if(a == b) {
+    return true
+  }if(!a || !b) {
+    return false
+  }return a.start == b.start && a.end == b.end
+};
+goog.math.Range.intersection = function(a, b) {
+  var c0 = Math.max(a.start, b.start);
+  var c1 = Math.min(a.end, b.end);
+  return c0 <= c1 ? new goog.math.Range(c0, c1) : null
+};
+goog.math.Range.hasIntersection = function(a, b) {
+  return Math.max(a.start, b.start) <= Math.min(a.end, b.end)
+};
+goog.math.Range.boundingRange = function(a, b) {
+  return new goog.math.Range(Math.min(a.start, b.start), Math.max(a.end, b.end))
+};
+goog.math.Range.contains = function(a, b) {
+  return a.start <= b.start && a.end >= b.end
+};
+goog.math.Range.containsPoint = function(range, p) {
+  return range.start <= p && range.end >= p
+};
+// Input 18
+goog.provide("goog.math.Size");
+goog.math.Size = function(width, height) {
+  this.width = width;
+  this.height = height
+};
+goog.math.Size.equals = function(a, b) {
+  if(a == b) {
+    return true
+  }if(!a || !b) {
+    return false
+  }return a.width == b.width && a.height == b.height
+};
+goog.math.Size.prototype.clone = function() {
+  return new goog.math.Size(this.width, this.height)
+};
+if(goog.DEBUG) {
+  goog.math.Size.prototype.toString = function() {
+    return"(" + this.width + " x " + this.height + ")"
+  }
+}goog.math.Size.prototype.getLongest = function() {
+  return Math.max(this.width, this.height)
+};
+goog.math.Size.prototype.getShortest = function() {
+  return Math.min(this.width, this.height)
+};
+goog.math.Size.prototype.area = function() {
+  return this.width * this.height
+};
+goog.math.Size.prototype.aspectRatio = function() {
+  return this.width / this.height
+};
+goog.math.Size.prototype.isEmpty = function() {
+  return!this.area()
+};
+goog.math.Size.prototype.ceil = function() {
+  this.width = Math.ceil(this.width);
+  this.height = Math.ceil(this.height);
+  return this
+};
+goog.math.Size.prototype.fitsInside = function(target) {
+  return this.width <= target.width && this.height <= target.height
+};
+goog.math.Size.prototype.floor = function() {
+  this.width = Math.floor(this.width);
+  this.height = Math.floor(this.height);
+  return this
+};
+goog.math.Size.prototype.round = function() {
+  this.width = Math.round(this.width);
+  this.height = Math.round(this.height);
+  return this
+};
+goog.math.Size.prototype.scale = function(s) {
+  this.width *= s;
+  this.height *= s;
+  return this
+};
+goog.math.Size.prototype.scaleToFit = function(target) {
+  var s = this.aspectRatio() > target.aspectRatio() ? target.width / this.width : target.height / this.height;
+  return this.scale(s)
+};
 // Input 19
+goog.provide("goog.math.Rect");
+goog.require("goog.math.Box");
+goog.require("goog.math.Size");
+goog.math.Rect = function(x, y, w, h) {
+  this.left = x;
+  this.top = y;
+  this.width = w;
+  this.height = h
+};
+goog.math.Rect.prototype.clone = function() {
+  return new goog.math.Rect(this.left, this.top, this.width, this.height)
+};
+goog.math.Rect.prototype.toBox = function() {
+  var right = this.left + this.width;
+  var bottom = this.top + this.height;
+  return new goog.math.Box(this.top, right, bottom, this.left)
+};
+goog.math.Rect.createFromBox = function(box) {
+  return new goog.math.Rect(box.left, box.top, box.right - box.left, box.bottom - box.top)
+};
+if(goog.DEBUG) {
+  goog.math.Rect.prototype.toString = function() {
+    return"(" + this.left + ", " + this.top + " - " + this.width + "w x " + this.height + "h)"
+  }
+}goog.math.Rect.equals = function(a, b) {
+  if(a == b) {
+    return true
+  }if(!a || !b) {
+    return false
+  }return a.left == b.left && a.width == b.width && a.top == b.top && a.height == b.height
+};
+goog.math.Rect.prototype.intersection = function(rect) {
+  var x0 = Math.max(this.left, rect.left);
+  var x1 = Math.min(this.left + this.width, rect.left + rect.width);
+  if(x0 <= x1) {
+    var y0 = Math.max(this.top, rect.top);
+    var y1 = Math.min(this.top + this.height, rect.top + rect.height);
+    if(y0 <= y1) {
+      this.left = x0;
+      this.top = y0;
+      this.width = x1 - x0;
+      this.height = y1 - y0;
+      return true
+    }
+  }return false
+};
+goog.math.Rect.intersection = function(a, b) {
+  var x0 = Math.max(a.left, b.left);
+  var x1 = Math.min(a.left + a.width, b.left + b.width);
+  if(x0 <= x1) {
+    var y0 = Math.max(a.top, b.top);
+    var y1 = Math.min(a.top + a.height, b.top + b.height);
+    if(y0 <= y1) {
+      return new goog.math.Rect(x0, y0, x1 - x0, y1 - y0)
+    }
+  }return null
+};
+goog.math.Rect.intersects = function(a, b) {
+  return a.left <= b.left + b.width && b.left <= a.left + a.width && a.top <= b.top + b.height && b.top <= a.top + a.height
+};
+goog.math.Rect.prototype.intersects = function(rect) {
+  return goog.math.Rect.intersects(this, rect)
+};
+goog.math.Rect.difference = function(a, b) {
+  var intersection = goog.math.Rect.intersection(a, b);
+  if(!intersection || !intersection.height || !intersection.width) {
+    return[a.clone()]
+  }var result = [];
+  var top = a.top;
+  var height = a.height;
+  var ar = a.left + a.width;
+  var ab = a.top + a.height;
+  var br = b.left + b.width;
+  var bb = b.top + b.height;
+  if(b.top > a.top) {
+    result.push(new goog.math.Rect(a.left, a.top, a.width, b.top - a.top));
+    top = b.top;
+    height -= b.top - a.top
+  }if(bb < ab) {
+    result.push(new goog.math.Rect(a.left, bb, a.width, ab - bb));
+    height = bb - top
+  }if(b.left > a.left) {
+    result.push(new goog.math.Rect(a.left, top, b.left - a.left, height))
+  }if(br < ar) {
+    result.push(new goog.math.Rect(br, top, ar - br, height))
+  }return result
+};
+goog.math.Rect.prototype.difference = function(rect) {
+  return goog.math.Rect.difference(this, rect)
+};
+goog.math.Rect.prototype.boundingRect = function(rect) {
+  var right = Math.max(this.left + this.width, rect.left + rect.width);
+  var bottom = Math.max(this.top + this.height, rect.top + rect.height);
+  this.left = Math.min(this.left, rect.left);
+  this.top = Math.min(this.top, rect.top);
+  this.width = right - this.left;
+  this.height = bottom - this.top
+};
+goog.math.Rect.boundingRect = function(a, b) {
+  if(!a || !b) {
+    return null
+  }var clone = a.clone();
+  clone.boundingRect(b);
+  return clone
+};
+goog.math.Rect.prototype.contains = function(another) {
+  if(another instanceof goog.math.Rect) {
+    return this.left <= another.left && this.left + this.width >= another.left + another.width && this.top <= another.top && this.top + this.height >= another.top + another.height
+  }else {
+    return another.x >= this.left && another.x <= this.left + this.width && another.y >= this.top && another.y <= this.top + this.height
+  }
+};
+goog.math.Rect.prototype.getSize = function() {
+  return new goog.math.Size(this.width, this.height)
+};
+// Input 20
 goog.provide("goog.math");
 goog.require("goog.array");
+goog.require("goog.math.Box");
+goog.require("goog.math.Coordinate");
+goog.require("goog.math.Range");
+goog.require("goog.math.Rect");
+goog.require("goog.math.Size");
 goog.math.randomInt = function(a) {
   return Math.floor(Math.random() * a)
 };
@@ -2885,7 +2966,7 @@ goog.math.isInt = function(num) {
 goog.math.isFiniteNumber = function(num) {
   return isFinite(num) && !isNaN(num)
 };
-// Input 20
+// Input 21
 goog.provide("goog.math.Vec2");
 goog.require("goog.math");
 goog.require("goog.math.Coordinate");
@@ -2956,7 +3037,7 @@ goog.math.Vec2.dot = function(a, b) {
 goog.math.Vec2.lerp = function(a, b, x) {
   return new goog.math.Vec2(goog.math.lerp(a.x, b.x, x), goog.math.lerp(a.y, b.y, x))
 };
-// Input 21
+// Input 22
 goog.provide("kemia.view.SingleBondRenderer");
 goog.require("kemia.view.BondRenderer");
 goog.require("goog.math.Vec2");
@@ -2979,7 +3060,7 @@ kemia.view.SingleBondRenderer.prototype.render = function(bond, transform, bondP
   bondPath.moveTo(coords[0].x, coords[0].y);
   bondPath.lineTo(coords[1].x, coords[1].y)
 };
-// Input 22
+// Input 23
 goog.provide("kemia.view.DoubleBondRenderer");
 goog.require("kemia.view.BondRenderer");
 kemia.view.DoubleBondRenderer = function(graphics, opt_config) {
@@ -3024,6 +3105,7 @@ kemia.view.DoubleBondRenderer.prototype.render = function(bond, transform, bondP
     }
   }else {
     orthogonal.scale(0.5);
+    orthogonal = this.limitDoubleBondLinesDistance(orthogonal);
     var coord1 = goog.math.Coordinate.sum(bond.source.coord, orthogonal);
     var coord2 = goog.math.Coordinate.sum(bond.target.coord, orthogonal);
     var coord3 = goog.math.Coordinate.difference(bond.source.coord, orthogonal);
@@ -3046,7 +3128,19 @@ kemia.view.DoubleBondRenderer.getFirstRing = function(bond) {
     return goog.array.contains(ring.bonds, bond)
   })
 };
-// Input 23
+kemia.view.DoubleBondRenderer.prototype.limitDoubleBondLinesDistance = function(orthogonal) {
+  var limit = 0.08;
+  if(Math.abs(orthogonal.x) > limit) {
+    var corr = orthogonal.x / limit;
+    orthogonal.x = orthogonal.x / corr;
+    orthogonal.y = orthogonal.y / corr
+  }if(Math.abs(orthogonal.y) > limit) {
+    var corr = orthogonal.y / limit;
+    orthogonal.x = orthogonal.x / corr;
+    orthogonal.y = orthogonal.y / corr
+  }return orthogonal
+};
+// Input 24
 goog.provide("kemia.view.TripleBondRenderer");
 goog.require("kemia.view.BondRenderer");
 kemia.view.TripleBondRenderer = function(graphics, opt_config) {
@@ -3061,7 +3155,7 @@ kemia.view.TripleBondRenderer.prototype.render = function(bond, transform, bondP
   var theta = kemia.view.BondRenderer.getTheta(bond);
   var angle_left = theta + Math.PI / 2;
   var angle_right = theta - Math.PI / 2;
-  var bondWidth = goog.math.Coordinate.distance(bond.source.coord, bond.target.coord) / 6;
+  var bondWidth = this.config.get("bond")["triple-dist"];
   var transleft = new kemia.graphics.AffineTransform(1, 0, 0, 1, Math.cos(angle_left) * bondWidth, Math.sin(angle_left) * bondWidth);
   var transright = new kemia.graphics.AffineTransform(1, 0, 0, 1, Math.cos(angle_right) * bondWidth, Math.sin(angle_right) * bondWidth);
   var leftside = transleft.transformCoords([bond.source.coord, bond.target.coord]);
@@ -3075,7 +3169,7 @@ kemia.view.TripleBondRenderer.prototype.render = function(bond, transform, bondP
   bondPath.lineTo(coords[5].x, coords[5].y);
   this.graphics.drawPath(bondPath, bondStroke, bondFill)
 };
-// Input 24
+// Input 25
 goog.provide("kemia.view.QuadrupleBondRenderer");
 goog.require("kemia.view.BondRenderer");
 kemia.view.QuadrupleBondRenderer = function(graphics, opt_config) {
@@ -3090,7 +3184,7 @@ kemia.view.QuadrupleBondRenderer.prototype.render = function(bond, transform, bo
   var theta = kemia.view.BondRenderer.getTheta(bond);
   var angle_left = theta + Math.PI / 2;
   var angle_right = theta - Math.PI / 2;
-  var bondWidth = goog.math.Coordinate.distance(bond.source.coord, bond.target.coord) / 6;
+  var bondWidth = this.config.get("bond")["quad-dist"];
   var transleft1 = new kemia.graphics.AffineTransform(1, 0, 0, 1, Math.cos(angle_left) * bondWidth / 3, Math.sin(angle_left) * bondWidth / 3);
   var transright1 = new kemia.graphics.AffineTransform(1, 0, 0, 1, Math.cos(angle_right) * bondWidth / 3, Math.sin(angle_right) * bondWidth / 3);
   var transleft2 = new kemia.graphics.AffineTransform(1, 0, 0, 1, Math.cos(angle_left) * bondWidth, Math.sin(angle_left) * bondWidth);
@@ -3110,7 +3204,7 @@ kemia.view.QuadrupleBondRenderer.prototype.render = function(bond, transform, bo
   bondPath.lineTo(coords[7].x, coords[7].y);
   this.graphics.drawPath(bondPath, bondStroke, bondFill)
 };
-// Input 25
+// Input 26
 goog.provide("kemia.view.SingleUpBondRenderer");
 goog.require("kemia.view.BondRenderer");
 kemia.view.SingleUpBondRenderer = function(graphics, opt_config) {
@@ -3128,7 +3222,8 @@ kemia.view.SingleUpBondRenderer.prototype.render = function(bond, transform, bon
   var trans2 = new kemia.graphics.AffineTransform(1, 0, 0, 1, Math.cos(angle_right) * strokeWidth, Math.sin(angle_right) * strokeWidth);
   var target2 = trans2.transformCoords([bond.target.coord])[0];
   if(bond.target.symbol != "C") {
-    var correct = 3;
+    var dist = goog.math.Coordinate.distance(target1, bond.source.coord);
+    var correct = 3 * dist;
     target1.x = (target1.x * (correct - 1) + bond.source.coord.x) / correct;
     target1.y = (target1.y * (correct - 1) + bond.source.coord.y) / correct;
     target2.x = (target2.x * (correct - 1) + bond.source.coord.x) / correct;
@@ -3138,7 +3233,7 @@ kemia.view.SingleUpBondRenderer.prototype.render = function(bond, transform, bon
   bondPath.lineTo(coords[1].x, coords[1].y);
   bondPath.lineTo(coords[2].x, coords[2].y)
 };
-// Input 26
+// Input 27
 goog.provide("kemia.view.SingleDownBondRenderer");
 goog.require("kemia.view.BondRenderer");
 kemia.view.SingleDownBondRenderer = function(graphics, opt_config) {
@@ -3165,475 +3260,202 @@ kemia.view.SingleDownBondRenderer.prototype.render = function(bond, transform, p
     path.lineTo(((lines - j) * coords[4].x + j * coords[3].x) / lines, ((lines - j) * coords[4].y + j * coords[3].y) / lines)
   }
 };
-// Input 27
-goog.provide("kemia.view.SingleUpOrDownBondRenderer");
-goog.require("kemia.view.BondRenderer");
-kemia.view.SingleUpOrDownBondRenderer = function(graphics, opt_config) {
-  kemia.view.BondRenderer.call(this, graphics, kemia.view.SingleUpOrDownBondRenderer.defaultConfig, opt_config)
-};
-goog.inherits(kemia.view.SingleUpOrDownBondRenderer, kemia.view.BondRenderer);
-kemia.view.SingleUpOrDownBondRenderer.prototype.render = function(bond, transform, path) {
-  this.setTransform(transform);
-  var width = this.config.get("bond")["stroke"]["width"] / 10;
-  var theta = kemia.view.BondRenderer.getTheta(bond);
-  var angle_left = theta + Math.PI / 2;
-  var angle_right = theta - Math.PI / 2;
-  var transleft = new kemia.graphics.AffineTransform(1, 0, 0, 1, Math.cos(angle_left) * width, Math.sin(angle_left) * width);
-  var transright = new kemia.graphics.AffineTransform(1, 0, 0, 1, Math.cos(angle_right) * width, Math.sin(angle_right) * width);
-  var leftside = transleft.transformCoords([bond.source.coord, bond.target.coord]);
-  var rightside = transright.transformCoords([bond.source.coord, bond.target.coord]);
-  var coords = transform.transformCoords([leftside[0], leftside[1], rightside[0], rightside[1]]);
-  var stroke = new goog.graphics.Stroke(this.config.get("bond")["stroke"]["width"], this.config.get("bond")["stroke"]["color"]);
-  var fill = null;
-  path.moveTo(coords[0].x, coords[0].y);
-  for(var j = 1, lines = 10;j < lines;j++) {
-    if(j % 2) {
-      path.lineTo(coords[0].x + (coords[1].x - coords[0].x) * j / lines, coords[0].y + (coords[1].y - coords[0].y) * j / lines)
-    }else {
-      path.lineTo(coords[2].x + (coords[3].x - coords[2].x) * j / lines, coords[2].y + (coords[3].y - coords[2].y) * j / lines)
-    }
-  }
-};
 // Input 28
-goog.provide("kemia.model.Flags");
-kemia.model.Flags.ISPLACED = 0;
-kemia.model.Flags.VISITED = 1;
-kemia.model.Flags.ISINRING = 2;
-kemia.model.Flags.MAX_FLAG_INDEX = 2;
+goog.provide("goog.debug.RelativeTimeProvider");
+goog.debug.RelativeTimeProvider = function() {
+  this.relativeTimeStart_ = goog.now()
+};
+goog.debug.RelativeTimeProvider.defaultInstance_ = new goog.debug.RelativeTimeProvider;
+goog.debug.RelativeTimeProvider.prototype.set = function(timeStamp) {
+  this.relativeTimeStart_ = timeStamp
+};
+goog.debug.RelativeTimeProvider.prototype.reset = function() {
+  this.set(goog.now())
+};
+goog.debug.RelativeTimeProvider.prototype.get = function() {
+  return this.relativeTimeStart_
+};
+goog.debug.RelativeTimeProvider.getDefaultInstance = function() {
+  return goog.debug.RelativeTimeProvider.defaultInstance_
+};
 // Input 29
-goog.provide("kemia.resource.Covalence");
-kemia.resource.Covalence = {C:4, Si:4, N:3, P:3, O:2, S:2, H:1};
-// Input 30
-goog.provide("kemia.model.Atom");
-goog.provide("kemia.model.Atom.Hybridizations");
-goog.require("kemia.model.Flags");
-goog.require("kemia.resource.Covalence");
-goog.require("goog.structs.Set");
-goog.require("goog.math.Coordinate");
-kemia.model.Atom = function(opt_symbol, opt_x, opt_y, opt_charge, opt_aromatic, opt_isotope) {
-  this.symbol = goog.isDef(opt_symbol) ? opt_symbol : "C";
-  var x = goog.isDef(opt_x) ? opt_x : 0;
-  var y = goog.isDef(opt_y) ? opt_y : 0;
-  this.coord = new goog.math.Coordinate(x, y);
-  this.bonds = new goog.structs.Set;
-  this.charge = goog.isDef(opt_charge) ? opt_charge : 0;
-  this.isotope = goog.isDef(opt_isotope) ? opt_isotope : 0;
-  this.aromatic = goog.isDef(opt_aromatic) ? opt_aromatic : false;
-  this.hybridization = null;
-  this.flags = new Array(kemia.model.Flags.MAX_FLAG_INDEX + 1)
+goog.provide("goog.debug.Formatter");
+goog.provide("goog.debug.HtmlFormatter");
+goog.provide("goog.debug.TextFormatter");
+goog.require("goog.debug.RelativeTimeProvider");
+goog.require("goog.string");
+goog.debug.Formatter = function(opt_prefix) {
+  this.prefix_ = opt_prefix || "";
+  this.startTimeProvider_ = goog.debug.RelativeTimeProvider.getDefaultInstance()
 };
-goog.exportSymbol("kemia.model.Atom", kemia.model.Atom);
-kemia.model.Atom.prototype.getSymbol = function() {
-  return this.symbol
+goog.debug.Formatter.prototype.showAbsoluteTime = true;
+goog.debug.Formatter.prototype.showRelativeTime = true;
+goog.debug.Formatter.prototype.showLoggerName = true;
+goog.debug.Formatter.prototype.showExceptionText = false;
+goog.debug.Formatter.prototype.formatRecord = goog.abstractMethod;
+goog.debug.Formatter.prototype.setStartTimeProvider = function(provider) {
+  this.startTimeProvider_ = provider
 };
-goog.exportSymbol("kemia.model.Atom.prototype.getSymbol", kemia.model.Atom.prototype.getSymbol);
-kemia.model.Atom.prototype.getCharge = function() {
-  return this.charge
+goog.debug.Formatter.prototype.getStartTimeProvider = function() {
+  return this.startTimeProvider_
 };
-goog.exportSymbol("kemia.model.Atom.prototype.getCharge", kemia.model.Atom.prototype.getCharge);
-kemia.model.Atom.prototype.countBonds = function() {
-  return this.bonds.getCount()
+goog.debug.Formatter.prototype.resetRelativeTimeStart = function() {
+  this.startTimeProvider_.reset()
 };
-kemia.model.Atom.prototype.hydrogenCount = function() {
-  var cov = kemia.resource.Covalence[this.symbol];
-  var bond_array = this.bonds.getValues();
-  var totalBondOrder = goog.array.reduce(bond_array, function(r, v) {
-    return r + v.order
-  }, 0);
-  var hydrogenCount = 0;
-  if(cov) {
-    hydrogenCount = cov - totalBondOrder + this.charge
-  }return hydrogenCount
+goog.debug.Formatter.getDateTimeStamp_ = function(logRecord) {
+  var time = new Date(logRecord.getMillis());
+  return goog.debug.Formatter.getTwoDigitString_(time.getFullYear() - 2E3) + goog.debug.Formatter.getTwoDigitString_(time.getMonth() + 1) + goog.debug.Formatter.getTwoDigitString_(time.getDate()) + " " + goog.debug.Formatter.getTwoDigitString_(time.getHours()) + ":" + goog.debug.Formatter.getTwoDigitString_(time.getMinutes()) + ":" + goog.debug.Formatter.getTwoDigitString_(time.getSeconds()) + "." + goog.debug.Formatter.getTwoDigitString_(Math.floor(time.getMilliseconds() / 10))
 };
-goog.exportSymbol("kemia.model.Atom.prototype.hydrogenCount", kemia.model.Atom.prototype.hydrogenCount);
-kemia.model.Atom.prototype.getNeighbors = function() {
-  var bonds = this.bonds.getValues();
-  var nbrs = [];
-  for(var i = 0, li = bonds.length;i < li;i++) {
-    nbrs.push(bonds[i].otherAtom(this))
-  }return nbrs
+goog.debug.Formatter.getTwoDigitString_ = function(n) {
+  if(n < 10) {
+    return"0" + n
+  }return String(n)
 };
-kemia.model.Atom.nextBondAngle = function(atom) {
-  var bonds = atom.bonds.getValues();
-  var new_angle;
-  if(bonds.length == 0) {
-    new_angle = 0
+goog.debug.Formatter.getRelativeTime_ = function(logRecord, relativeTimeStart) {
+  var ms = logRecord.getMillis() - relativeTimeStart;
+  var sec = ms / 1E3;
+  var str = sec.toFixed(3);
+  var spacesToPrepend = 0;
+  if(sec < 1) {
+    spacesToPrepend = 2
   }else {
-    if(bonds.length == 1) {
-      var other_atom = bonds[0].otherAtom(atom);
-      var existing_angle = goog.math.angle(atom.coord.x, atom.coord.y, other_atom.coord.x, other_atom.coord.y);
-      var other_angles_diff = goog.array.map(other_atom.bonds.getValues(), function(b) {
-        var not_other = b.otherAtom(other_atom);
-        if(not_other != atom) {
-          return goog.math.angleDifference(existing_angle, goog.math.angle(other_atom.coord.x, other_atom.coord.y, not_other.coord.x, not_other.coord.y))
-        }
-      });
-      goog.array.sort(other_angles_diff);
-      var min_angle = other_angles_diff[0];
-      if(min_angle > 0) {
-        new_angle = existing_angle - 120
-      }else {
-        new_angle = existing_angle + 120
-      }
-    }else {
-      if(bonds.length == 2) {
-        var angles = goog.array.map(bonds, function(bond) {
-          var other_atom = bond.otherAtom(atom);
-          return goog.math.angle(atom.coord.x, atom.coord.y, other_atom.coord.x, other_atom.coord.y)
-        });
-        var diff = goog.math.angleDifference(angles[0], angles[1]);
-        if(Math.abs(diff) < 180) {
-          diff = 180 + diff / 2
-        }else {
-          diff = diff / 2
-        }new_angle = angles[0] + diff
-      }else {
-        if(bonds.length == 3) {
-          goog.array.sort(bonds, function(b1, b2) {
-            return goog.array.defaultCompare(b1.otherAtom(atom).bonds.getValues().length, b2.otherAtom(atom).bonds.getValues().length)
-          });
-          var insert_between = goog.array.slice(bonds, 0, 2);
-          var angles = goog.array.map(insert_between, function(b) {
-            var other_atom = b.otherAtom(atom);
-            return goog.math.angle(atom.coord.x, atom.coord.y, other_atom.coord.x, other_atom.coord.y)
-          });
-          new_angle = angles[0] + goog.math.angleDifference(angles[0], angles[1]) / 2
-        }
-      }
+    while(sec < 100) {
+      spacesToPrepend++;
+      sec *= 10
     }
-  }return new_angle
+  }while(spacesToPrepend-- > 0) {
+    str = " " + str
+  }return str
 };
-kemia.model.Atom.prototype.clone = function() {
-  return new kemia.model.Atom(this.symbol, this.coord.x, this.coord.y, this.charge, this.aromatic, this.isotope)
+goog.debug.HtmlFormatter = function(opt_prefix) {
+  goog.debug.Formatter.call(this, opt_prefix)
 };
-kemia.model.Atom.Hybridizations = {S:0, SP1:1, SP2:2, SP3:3, PLANAR3:4, SP3D1:5, SP3D2:6, SP3D3:7, SP3D4:8, SP3D5:9};
-kemia.model.Atom.prototype.setFlag = function(flag_type, flag_value) {
-  this.flags[flag_type] = flag_value
+goog.inherits(goog.debug.HtmlFormatter, goog.debug.Formatter);
+goog.debug.HtmlFormatter.prototype.showExceptionText = true;
+goog.debug.HtmlFormatter.prototype.formatRecord = function(logRecord) {
+  var className;
+  switch(logRecord.getLevel().value) {
+    case goog.debug.Logger.Level.SHOUT.value:
+      className = "dbg-sh";
+      break;
+    case goog.debug.Logger.Level.SEVERE.value:
+      className = "dbg-sev";
+      break;
+    case goog.debug.Logger.Level.WARNING.value:
+      className = "dbg-w";
+      break;
+    case goog.debug.Logger.Level.INFO.value:
+      className = "dbg-i";
+      break;
+    case goog.debug.Logger.Level.FINE.value:
+    ;
+    default:
+      className = "dbg-f";
+      break
+  }
+  var sb = [];
+  sb.push(this.prefix_, " ");
+  if(this.showAbsoluteTime) {
+    sb.push("[", goog.debug.Formatter.getDateTimeStamp_(logRecord), "] ")
+  }if(this.showRelativeTime) {
+    sb.push("[", goog.string.whitespaceEscape(goog.debug.Formatter.getRelativeTime_(logRecord, this.startTimeProvider_.get())), "s] ")
+  }if(this.showLoggerName) {
+    sb.push("[", goog.string.htmlEscape(logRecord.getLoggerName()), "] ")
+  }sb.push('<span class="', className, '">', goog.string.newLineToBr(goog.string.whitespaceEscape(goog.string.htmlEscape(logRecord.getMessage()))));
+  if(this.showExceptionText && logRecord.getException()) {
+    sb.push("<br>", goog.string.newLineToBr(goog.string.whitespaceEscape(logRecord.getExceptionText() || "")))
+  }sb.push("</span><br>");
+  return sb.join("")
 };
-kemia.model.Atom.prototype.toString = function() {
-  return"kemia.model.Atom [" + this.symbol + "] " + this.coord.toString()
+goog.debug.TextFormatter = function(opt_prefix) {
+  goog.debug.Formatter.call(this, opt_prefix)
+};
+goog.inherits(goog.debug.TextFormatter, goog.debug.Formatter);
+goog.debug.TextFormatter.prototype.formatRecord = function(logRecord) {
+  var sb = [];
+  sb.push(this.prefix_, " ");
+  if(this.showAbsoluteTime) {
+    sb.push("[", goog.debug.Formatter.getDateTimeStamp_(logRecord), "] ")
+  }if(this.showRelativeTime) {
+    sb.push("[", goog.debug.Formatter.getRelativeTime_(logRecord, this.startTimeProvider_.get()), "s] ")
+  }if(this.showLoggerName) {
+    sb.push("[", logRecord.getLoggerName(), "] ")
+  }sb.push(logRecord.getMessage(), "\n");
+  if(this.showExceptionText && logRecord.getException()) {
+    sb.push(logRecord.getExceptionText(), "\n")
+  }return sb.join("")
+};
+// Input 30
+goog.provide("goog.structs.CircularBuffer");
+goog.structs.CircularBuffer = function(opt_maxSize) {
+  this.maxSize_ = opt_maxSize || 100;
+  this.buff_ = []
+};
+goog.structs.CircularBuffer.prototype.nextPtr_ = 0;
+goog.structs.CircularBuffer.prototype.add = function(item) {
+  this.buff_[this.nextPtr_] = item;
+  this.nextPtr_ = (this.nextPtr_ + 1) % this.maxSize_
+};
+goog.structs.CircularBuffer.prototype.get = function(index) {
+  index = this.normalizeIndex_(index);
+  return this.buff_[index]
+};
+goog.structs.CircularBuffer.prototype.set = function(index, item) {
+  index = this.normalizeIndex_(index);
+  this.buff_[index] = item
+};
+goog.structs.CircularBuffer.prototype.getCount = function() {
+  return this.buff_.length
+};
+goog.structs.CircularBuffer.prototype.isEmpty = function() {
+  return this.buff_.length == 0
+};
+goog.structs.CircularBuffer.prototype.clear = function() {
+  this.buff_.length = 0;
+  this.nextPtr_ = 0
+};
+goog.structs.CircularBuffer.prototype.getValues = function() {
+  return this.getNewestValues(this.getCount())
+};
+goog.structs.CircularBuffer.prototype.getNewestValues = function(maxCount) {
+  var l = this.getCount();
+  var start = this.getCount() - maxCount;
+  var rv = [];
+  for(var i = start;i < l;i++) {
+    rv[i] = this.get(i)
+  }return rv
+};
+goog.structs.CircularBuffer.prototype.getKeys = function() {
+  var rv = [];
+  var l = this.getCount();
+  for(var i = 0;i < l;i++) {
+    rv[i] = i
+  }return rv
+};
+goog.structs.CircularBuffer.prototype.containsKey = function(key) {
+  return key < this.getCount()
+};
+goog.structs.CircularBuffer.prototype.containsValue = function(value) {
+  var l = this.getCount();
+  for(var i = 0;i < l;i++) {
+    if(this.get(i) == value) {
+      return true
+    }
+  }return false
+};
+goog.structs.CircularBuffer.prototype.getLast = function() {
+  if(this.getCount() == 0) {
+    return null
+  }return this.get(this.getCount() - 1)
+};
+goog.structs.CircularBuffer.prototype.normalizeIndex_ = function(index) {
+  if(index >= this.buff_.length) {
+    throw Error("Out of bounds exception");
+  }if(this.buff_.length < this.maxSize_) {
+    return index
+  }return(this.nextPtr_ + Number(index)) % this.maxSize_
 };
 // Input 31
-goog.provide("kemia.model.Bond");
-goog.require("kemia.model.Atom");
-kemia.model.Bond = function(source, target, opt_order, opt_stereo, opt_aromatic, opt_molecule) {
-  this.source = source;
-  this.target = target;
-  this.order = goog.isDef(opt_order) ? opt_order : kemia.model.Bond.ORDER.SINGLE;
-  this.stereo = goog.isDef(opt_stereo) ? opt_stereo : kemia.model.Bond.STEREO.NOT_STEREO;
-  this.aromatic = goog.isDef(opt_aromatic) ? opt_aromatic : false;
-  this.molecule = goog.isDef(opt_molecule) ? opt_molecule : null
-};
-goog.exportSymbol("kemia.model.Bond", kemia.model.Bond);
-kemia.model.Bond.prototype.otherAtom = function(atom) {
-  if(atom === this.source) {
-    return this.target
-  }if(atom === this.target) {
-    return this.source
-  }return null
-};
-kemia.model.Bond.prototype.getLength = function() {
-  return goog.math.Coordinate.distance(this.source.coord, this.target.coord)
-};
-kemia.model.Bond.prototype.clone = function() {
-  return new kemia.model.Bond(this.source, this.target, this.order, this.stereo, this.aromatic, this.molecule)
-};
-kemia.model.Bond.prototype.deepClone = function() {
-  return new kemia.model.Bond(this.source.clone(), this.target.clone(), this.order, this.stereo, this.aromatic, this.molecule)
-};
-kemia.model.Bond.ORDER = {SINGLE:1, DOUBLE:2, TRIPLE:3, QUADRUPLE:4};
-kemia.model.Bond.STEREO = {NOT_STEREO:10, UP:11, UP_OR_DOWN:12, DOWN:13};
-kemia.model.Bond.prototype.toString = function() {
-  var molname = this.molecule ? this.molecule.name : "no molecule";
-  return"kemia.model.Bond[" + this.order + ", " + this.stereo + "]  " + this.source.toString() + " -- " + this.target.toString() + " mol: " + molname
-};
-// Input 32
-goog.provide("goog.reflect");
-goog.reflect.object = function(type, object) {
-  return object
-};
-// Input 33
-goog.provide("kemia.view.BondRendererFactory");
-goog.require("kemia.view.SingleBondRenderer");
-goog.require("kemia.view.DoubleBondRenderer");
-goog.require("kemia.view.TripleBondRenderer");
-goog.require("kemia.view.QuadrupleBondRenderer");
-goog.require("kemia.view.SingleUpBondRenderer");
-goog.require("kemia.view.SingleDownBondRenderer");
-goog.require("kemia.view.SingleUpOrDownBondRenderer");
-goog.require("kemia.model.Bond");
-goog.require("goog.object");
-goog.require("goog.reflect");
-kemia.view.BondRendererFactory = function(graphics, opt_config) {
-  this.graphics = graphics;
-  this.config = new goog.structs.Map;
-  if(opt_config) {
-    this.config.addAll(opt_config)
-  }
-};
-kemia.view.BondRendererFactory.prototype.logger = goog.debug.Logger.getLogger("kemia.view.BondRendererFactory");
-kemia.view.BondRendererFactory.ORDER_RENDERER = goog.object.transpose(goog.reflect.object(kemia.view.BondRendererFactory, {getSingleBondRenderer:kemia.model.Bond.ORDER.SINGLE, getDoubleBondRenderer:kemia.model.Bond.ORDER.DOUBLE, getTripleBondRenderer:kemia.model.Bond.ORDER.TRIPLE, getQuadrupleBondRenderer:kemia.model.Bond.ORDER.QUADRUPLE}));
-kemia.view.BondRendererFactory.STEREO_RENDERER = goog.object.transpose(goog.reflect.object(kemia.view.BondRendererFactory, {getSingleBondNotStereoRenderer:kemia.model.Bond.STEREO.NOT_STEREO, getSingleBondUpRenderer:kemia.model.Bond.STEREO.UP, getSingleBondDownRenderer:kemia.model.Bond.STEREO.DOWN, getSingleBondUpOrDownRenderer:kemia.model.Bond.STEREO.UP_OR_DOWN}));
-kemia.view.BondRendererFactory.prototype.get = function(bond) {
-  return this[kemia.view.BondRendererFactory.ORDER_RENDERER[bond.order]].apply(this, [bond.stereo])
-};
-kemia.view.BondRendererFactory.prototype.getSingleBondRenderer = function(stereo) {
-  return this[kemia.view.BondRendererFactory.STEREO_RENDERER[stereo]].apply(this)
-};
-kemia.view.BondRendererFactory.prototype.getSingleBondNotStereoRenderer = function() {
-  if(!this.singleNotStereoBondRenderer) {
-    this.singleNotStereoBondRenderer = new kemia.view.SingleBondRenderer(this.graphics, this.config)
-  }return this.singleNotStereoBondRenderer
-};
-kemia.view.BondRendererFactory.prototype.getSingleBondUpRenderer = function() {
-  if(!this.singleUpBondRenderer) {
-    this.singleUpBondRenderer = new kemia.view.SingleUpBondRenderer(this.graphics, this.config)
-  }return this.singleUpBondRenderer
-};
-kemia.view.BondRendererFactory.prototype.getSingleBondDownRenderer = function() {
-  if(!this.singleDownBondRenderer) {
-    this.singleDownBondRenderer = new kemia.view.SingleDownBondRenderer(this.graphics, this.config)
-  }return this.singleDownBondRenderer
-};
-kemia.view.BondRendererFactory.prototype.getSingleBondUpOrDownRenderer = function() {
-  if(!this.singleUpOrDownBondRenderer) {
-    this.singleUpOrDownBondRenderer = new kemia.view.SingleUpOrDownBondRenderer(this.graphics, this.config)
-  }return this.singleUpOrDownBondRenderer
-};
-kemia.view.BondRendererFactory.prototype.getDoubleBondRenderer = function() {
-  if(!this.doubleBondRenderer) {
-    this.doubleBondRenderer = new kemia.view.DoubleBondRenderer(this.graphics, this.config)
-  }return this.doubleBondRenderer
-};
-kemia.view.BondRendererFactory.prototype.getTripleBondRenderer = function() {
-  if(!this.tripleBondRenderer) {
-    this.tripleBondRenderer = new kemia.view.TripleBondRenderer(this.graphics, this.config)
-  }return this.tripleBondRenderer
-};
-kemia.view.BondRendererFactory.prototype.getQuadrupleBondRenderer = function() {
-  if(!this.quadrupleBondRenderer) {
-    this.quadrupleBondRenderer = new kemia.view.QuadrupleBondRenderer(this.graphics, this.config)
-  }return this.quadrupleBondRenderer
-};
-// Input 34
-goog.provide("kemia.view.AtomRenderer");
-goog.require("kemia.view.Renderer");
-goog.require("goog.debug.Logger");
-kemia.view.AtomRenderer = function(graphics, opt_config) {
-  kemia.view.Renderer.call(this, graphics, kemia.view.AtomRenderer.defaultConfig, opt_config)
-};
-goog.inherits(kemia.view.AtomRenderer, kemia.view.Renderer);
-kemia.view.AtomRenderer.prototype.render = function(atom, transform, opt_group) {
-  this.setTransform(transform);
-  var atom_config = this.config.get("atom");
-  var color = this.config.get(atom.symbol) ? this.config.get(atom.symbol)["color"] : atom_config["color"];
-  var scale = transform.getScaleX();
-  var fontSize = scale / 1.8 > 12 ? 15 : scale / 1.8;
-  var font = new goog.graphics.Font(fontSize, atom_config["fontName"]);
-  var stroke = new goog.graphics.Stroke(atom_config["stroke"]["width"], "black");
-  var fill = new goog.graphics.SolidFill(color);
-  var point = transform.transformCoords([atom.coord])[0];
-  var symbol = this.compoundSymbol(atom);
-  var graphics = this.graphics;
-  var w = symbol.text.length * 0.55 * font.size;
-  var h = font.size;
-  if(symbol.text) {
-    graphics.drawText(symbol.text, point.x - w / 2, point.y - h / 2, w, h, symbol.justification, null, font, stroke, fill, opt_group);
-    if(symbol.justification == "left") {
-      if(symbol.subscript || symbol.superscript) {
-        var subSize = this.config.get("subscriptSize");
-        if(symbol.subscript) {
-          graphics.drawText(symbol.subscript, point.x + w * 0.9, point.y, subSize, subSize, "center", null, font, stroke, fill, opt_group)
-        }if(symbol.superscript) {
-          graphics.drawText(symbol.superscript, point.x + w, point.y - h * 0.8, subSize, subSize, "center", null, font, stroke, fill, opt_group)
-        }
-      }
-    }else {
-      if(symbol.justification == "right") {
-        if(symbol.subscript || symbol.superscript) {
-          var subSize = this.config.get("subscriptSize");
-          if(symbol.subscript) {
-            graphics.drawText("H", point.x - w * 3, point.y - h / 2, w, h, "center", null, font, stroke, fill, opt_group);
-            graphics.drawText(symbol.subscript, point.x - w * 1.8, point.y, subSize, subSize, "center", null, font, stroke, fill, opt_group)
-          }if(symbol.superscript) {
-            graphics.drawText(symbol.superscript, point.x + w, point.y - h * 0.8, subSize, subSize, "center", null, font, stroke, fill, opt_group)
-          }
-        }
-      }
-    }
-  }
-};
-kemia.view.AtomRenderer.prototype.highlightOn = function(atom, opt_color, opt_group) {
-  var atom_config = this.config.get("atom");
-  var strokeWidth = atom_config["stroke"]["width"] * 24;
-  if(!opt_color) {
-    opt_color = this.config.get(atom.symbol) ? this.config.get(atom.symbol)["color"] : atom_config["color"]
-  }var stroke = null;
-  var fill = new goog.graphics.SolidFill(opt_color, 0.3);
-  var radius = atom_config["highlight"]["radius"] * this.transform.getScaleX();
-  var coords = this.transform.transformCoords([atom.coord])[0];
-  if(!opt_group) {
-    opt_group = this.graphics.createGroup()
-  }this.graphics.drawCircle(coords.x, coords.y, radius, stroke, fill, opt_group);
-  return opt_group
-};
-kemia.view.AtomRenderer.prototype.compoundSymbol = function(atom) {
-  var retval = {text:"", justification:"center", superscript:"", subscript:""};
-  if(atom.symbol != "C" || atom.countBonds() < 1 || atom.charge) {
-    var hydrogen_count = atom.hydrogenCount();
-    if(hydrogen_count == 0) {
-      retval.text = atom.symbol
-    }else {
-      bond_direction = kemia.view.AtomRenderer.bondDirection(atom);
-      var justification = "center";
-      if(bond_direction == "SW" || bond_direction == "W" || bond_direction == "NW") {
-        justification = "right";
-        if(hydrogen_count == 1) {
-          retval.text = "H"
-        }retval.text += atom.symbol
-      }else {
-        justification = "left";
-        retval.text = atom.symbol + "H"
-      }if(hydrogen_count > 1) {
-        retval.subscript = String(hydrogen_count)
-      }
-    }if(atom.charge) {
-      if(atom.charge > 1) {
-        retval.superscript += "+" + atom.charge
-      }else {
-        if(atom.charge < -1) {
-          retval.superscript += atom.charge
-        }else {
-          if(atom.charge == -1) {
-            retval.superscript = "-"
-          }else {
-            if(atom.charge == 1) {
-              retval.superscript = "+"
-            }
-          }
-        }
-      }
-    }
-  }else {
-    retval.text = ""
-  }retval.justification = justification;
-  return retval
-};
-kemia.view.AtomRenderer.bondOrientation = function(atom, i) {
-  if(atom.bonds.getValues().length == 0) {
-    return 0
-  }var bond = atom.bonds.getValues()[i];
-  var target = bond.target.coord;
-  var source = bond.source.coord;
-  var dy = target.y - source.y;
-  var dx = target.x - source.x;
-  if(atom == bond.source) {
-    dx = -dx;
-    dy = -dy
-  }var angle = Math.atan2(dy, dx) * 180 / Math.PI;
-  if(angle < 0) {
-    angle = 360 + angle
-  }return angle
-};
-kemia.view.AtomRenderer.bondDirection = function(atom) {
-  var nbonds = atom.bonds.getCount();
-  var angle = kemia.view.AtomRenderer.bondOrientation(atom, 0);
-  if(nbonds > 1) {
-    for(var i = 1;i < nbonds;++i) {
-      angle += kemia.view.AtomRenderer.bondOrientation(atom, i)
-    }angle = angle / nbonds % 360
-  }if(angle > 350 || angle <= 10) {
-    return"E"
-  }else {
-    if(angle > 10 && angle <= 80) {
-      return"SE"
-    }else {
-      if(angle > 80 && angle <= 100) {
-        return"S"
-      }else {
-        if(angle > 100 && angle <= 170) {
-          return"SW"
-        }else {
-          if(angle > 170 && angle <= 190) {
-            return"W"
-          }else {
-            if(angle > 190 && angle <= 260) {
-              return"NW"
-            }else {
-              if(angle > 260 && angle <= 280) {
-                return"N"
-              }else {
-                return"NE"
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-};
-kemia.view.AtomRenderer.prototype.logger = goog.debug.Logger.getLogger("kemia.view.AtomRenderer");
-kemia.view.AtomRenderer.defaultConfig = {atom:{color:"#FF9999", diameter:0.05, highlight:{radius:0.3}, stroke:{width:0.15}, fontName:"Arial"}, margin:20, subscriptSize:5, N:{color:"blue"}, O:{color:"red"}, S:{color:"yellow"}, P:{color:"orange"}, Cl:{color:"green"}, F:{color:"green"}, Br:{color:"DarkRed"}, I:{color:"purple"}, C:{color:"black"}, R1:{color:"black"}, R2:{color:"black"}, H:{color:"white"}};
-// Input 35
-goog.provide("kemia.view.MoleculeRenderer");
-goog.require("kemia.view.BondRenderer");
-goog.require("kemia.view.BondRendererFactory");
-goog.require("kemia.view.AtomRenderer");
-goog.require("goog.asserts");
-kemia.view.MoleculeRenderer = function(graphics, opt_config) {
-  kemia.view.Renderer.call(this, graphics, kemia.view.MoleculeRenderer.defaultConfig, opt_config);
-  this.scale_factor = 1;
-  this.bondRendererFactory = new kemia.view.BondRendererFactory(graphics, this.config);
-  this.atomRenderer = new kemia.view.AtomRenderer(graphics, this.config)
-};
-goog.inherits(kemia.view.MoleculeRenderer, kemia.view.Renderer);
-kemia.view.MoleculeRenderer.prototype.logger = goog.debug.Logger.getLogger("kemia.view.MoleculeRenderer");
-kemia.view.MoleculeRenderer.prototype.setScaleFactor = function(scale) {
-  this.scale_factor = scale
-};
-kemia.view.MoleculeRenderer.prototype.render = function(molecule, trans) {
-  molecule.resetRingCenters();
-  molecule.group = this.graphics.createGroup();
-  var atom_coords = goog.array.map(molecule.atoms, function(a) {
-    return a.coord
-  });
-  var box = goog.math.Box.boundingBox.apply(null, atom_coords);
-  if(!trans) {
-    var m = this.config.get("margin");
-    var ex_box = box.expand(m, m, m, m);
-    trans = this.buildTransform(ex_box)
-  }this.setTransform(trans);
-  var center = new goog.math.Coordinate((box.left + box.right) / 2, (box.top + box.bottom) / 2);
-  var t_center = this.transform.transformCoords([center])[0];
-  var rx = Math.abs(this.transform.getScaleX() * (box.right - box.left) / 2);
-  var ry = Math.abs(this.transform.getScaleY() * (box.bottom - box.top) / 2);
-  var bondStroke = new goog.graphics.Stroke(this.config.get("bond")["stroke"]["width"], this.config.get("bond")["stroke"]["color"]);
-  var bondFill = new goog.graphics.SolidFill(this.config.get("bond")["fill"]["color"]);
-  if(molecule.bonds.length) {
-    var bondPath = new goog.graphics.Path;
-    goog.array.forEach(molecule.bonds, function(bond) {
-      this.bondRendererFactory.get(bond).render(bond, trans, bondPath)
-    }, this);
-    this.graphics.drawPath(bondPath, bondStroke, bondFill, molecule.group)
-  }goog.array.forEach(molecule.atoms, function(atom) {
-    this.atomRenderer.render(atom, trans, molecule.group)
-  }, this)
-};
-kemia.view.MoleculeRenderer.prototype.highlightOn = function(molecule, opt_color, opt_group) {
-  if(!opt_color) {
-    opt_color = this.config.get("highlight")["color"]
-  }if(!opt_group) {
-    opt_group = this.graphics.createGroup()
-  }goog.array.forEach(molecule.bonds, function(bond) {
-    this.bondRendererFactory.get(bond).highlightOn(bond, opt_color, opt_group)
-  }, this);
-  goog.array.forEach(molecule.atoms, function(atom) {
-    this.atomRenderer.highlightOn(atom, opt_color, opt_group)
-  }, this);
-  return opt_group
-};
-kemia.view.MoleculeRenderer.defaultConfig = {bond:{stroke:{width:2, color:"black"}, fill:{color:"black"}}, highlight:{radius:0.3, color:"blue"}};
-// Input 36
 goog.provide("goog.userAgent");
 goog.require("goog.string");
 goog.userAgent.ASSUME_IE = false;
@@ -3714,16 +3536,7 @@ goog.userAgent.determineVersion_ = function() {
       var arr = re.exec(goog.userAgent.getUserAgentString());
       version = arr ? arr[1] : ""
     }
-  }if(goog.userAgent.IE) {
-    var docMode = goog.userAgent.getDocumentMode_();
-    if(docMode > parseFloat(version)) {
-      return String(docMode)
-    }
   }return version
-};
-goog.userAgent.getDocumentMode_ = function() {
-  var doc = goog.global["document"];
-  return doc ? doc["documentMode"] : undefined
 };
 goog.userAgent.VERSION = goog.userAgent.determineVersion_();
 goog.userAgent.compare = function(v1, v2) {
@@ -3733,16 +3546,200 @@ goog.userAgent.isVersionCache_ = {};
 goog.userAgent.isVersion = function(version) {
   return goog.userAgent.isVersionCache_[version] || (goog.userAgent.isVersionCache_[version] = goog.string.compareVersions(goog.userAgent.VERSION, version) >= 0)
 };
-// Input 37
-goog.provide("goog.dom.BrowserFeature");
+// Input 32
+goog.provide("goog.debug.DebugWindow");
+goog.require("goog.debug.HtmlFormatter");
+goog.require("goog.debug.LogManager");
+goog.require("goog.structs.CircularBuffer");
 goog.require("goog.userAgent");
-goog.dom.BrowserFeature = {CAN_ADD_NAME_OR_TYPE_ATTRIBUTES:!goog.userAgent.IE || goog.userAgent.isVersion("9"), CAN_USE_INNER_TEXT:goog.userAgent.IE && !goog.userAgent.isVersion("9"), INNER_HTML_NEEDS_SCOPED_ELEMENT:goog.userAgent.IE};
-// Input 38
+goog.debug.DebugWindow = function(opt_identifier, opt_prefix) {
+  this.identifier_ = opt_identifier || "";
+  this.prefix_ = opt_prefix || "";
+  this.outputBuffer_ = [];
+  this.savedMessages_ = new goog.structs.CircularBuffer(goog.debug.DebugWindow.MAX_SAVED);
+  this.publishHandler_ = goog.bind(this.addLogRecord, this);
+  this.formatter_ = new goog.debug.HtmlFormatter(this.prefix_);
+  this.filteredLoggers_ = {};
+  this.setCapturing(true);
+  this.enabled_ = goog.debug.DebugWindow.isEnabled(this.identifier_);
+  goog.global.setInterval(goog.bind(this.saveWindowPositionSize_, this), 7500)
+};
+goog.debug.DebugWindow.MAX_SAVED = 500;
+goog.debug.DebugWindow.COOKIE_TIME = 30 * 24 * 60 * 60 * 1E3;
+goog.debug.DebugWindow.prototype.welcomeMessage = "LOGGING";
+goog.debug.DebugWindow.prototype.win_ = null;
+goog.debug.DebugWindow.prototype.winOpening_ = false;
+goog.debug.DebugWindow.prototype.isCapturing_ = false;
+goog.debug.DebugWindow.showedBlockedAlert_ = false;
+goog.debug.DebugWindow.prototype.bufferTimeout_ = null;
+goog.debug.DebugWindow.prototype.lastCall_ = goog.now();
+goog.debug.DebugWindow.prototype.setWelcomeMessage = function(msg) {
+  this.welcomeMessage = msg
+};
+goog.debug.DebugWindow.prototype.init = function() {
+  if(this.enabled_) {
+    this.openWindow_()
+  }
+};
+goog.debug.DebugWindow.prototype.isEnabled = function() {
+  return this.enabled_
+};
+goog.debug.DebugWindow.prototype.setEnabled = function(enable) {
+  this.enabled_ = enable;
+  if(this.enabled_) {
+    this.openWindow_();
+    if(this.win_) {
+      this.writeInitialDocument_()
+    }
+  }this.setCookie_("enabled", enable ? "1" : "0")
+};
+goog.debug.DebugWindow.prototype.isCapturing = function() {
+  return this.isCapturing_
+};
+goog.debug.DebugWindow.prototype.setCapturing = function(capturing) {
+  if(capturing == this.isCapturing_) {
+    return
+  }this.isCapturing_ = capturing;
+  var rootLogger = goog.debug.LogManager.getRoot();
+  if(capturing) {
+    rootLogger.addHandler(this.publishHandler_)
+  }else {
+    rootLogger.removeHandler(this.publishHandler_)
+  }
+};
+goog.debug.DebugWindow.prototype.getFormatter = function() {
+  return this.formatter_
+};
+goog.debug.DebugWindow.prototype.setFormatter = function(formatter) {
+  this.formatter_ = formatter
+};
+goog.debug.DebugWindow.prototype.addSeparator = function() {
+  this.write_("<hr>")
+};
+goog.debug.DebugWindow.prototype.clear_ = function() {
+  this.savedMessages_.clear();
+  if(this.win_) {
+    this.writeInitialDocument_()
+  }
+};
+goog.debug.DebugWindow.prototype.addLogRecord = function(logRecord) {
+  if(this.filteredLoggers_[logRecord.getLoggerName()]) {
+    return
+  }var html = this.formatter_.formatRecord(logRecord);
+  this.write_(html)
+};
+goog.debug.DebugWindow.prototype.write_ = function(html) {
+  if(this.enabled_) {
+    this.openWindow_();
+    this.savedMessages_.add(html);
+    this.writeToLog_(html)
+  }else {
+    this.savedMessages_.add(html)
+  }
+};
+goog.debug.DebugWindow.prototype.writeToLog_ = function(html) {
+  this.outputBuffer_.push(html);
+  goog.global.clearTimeout(this.bufferTimeout_);
+  if(goog.now() - this.lastCall_ > 750) {
+    this.writeBufferToLog_()
+  }else {
+    this.bufferTimeout_ = goog.global.setTimeout(goog.bind(this.writeBufferToLog_, this), 250)
+  }
+};
+goog.debug.DebugWindow.prototype.writeBufferToLog_ = function() {
+  this.lastCall_ = goog.now();
+  if(this.win_) {
+    var body = this.win_.document.body;
+    var scroll = body && body.scrollHeight - (body.scrollTop + body.clientHeight) <= 100;
+    this.win_.document.write(this.outputBuffer_.join(""));
+    this.outputBuffer_.length = 0;
+    if(scroll) {
+      this.win_.scrollTo(0, 1E6)
+    }
+  }
+};
+goog.debug.DebugWindow.prototype.writeSavedMessages_ = function() {
+  var messages = this.savedMessages_.getValues();
+  for(var i = 0;i < messages.length;i++) {
+    this.writeToLog_(messages[i])
+  }
+};
+goog.debug.DebugWindow.prototype.openWindow_ = function() {
+  if(this.win_ && !this.win_.closed || this.winOpening_) {
+    return
+  }var winpos = this.getCookie_("dbg", "0,0,800,500").split(",");
+  var x = Number(winpos[0]);
+  var y = Number(winpos[1]);
+  var w = Number(winpos[2]);
+  var h = Number(winpos[3]);
+  this.winOpening_ = true;
+  this.win_ = window.open("", this.getWindowName_(), "width=" + w + ",height=" + h + ",toolbar=no,resizable=yes," + "scrollbars=yes,left=" + x + ",top=" + y + ",status=no,screenx=" + x + ",screeny=" + y);
+  if(!this.win_) {
+    if(!this.showedBlockedAlert_) {
+      alert("Logger popup was blocked");
+      this.showedBlockedAlert_ = true
+    }
+  }this.winOpening_ = false;
+  if(this.win_) {
+    this.writeInitialDocument_()
+  }
+};
+goog.debug.DebugWindow.prototype.getWindowName_ = function() {
+  return goog.userAgent.IE ? this.identifier_.replace(/[\s\-\.\,]/g, "_") : this.identifier_
+};
+goog.debug.DebugWindow.prototype.getStyleRules = function() {
+  return"*{font:normal 14px monospace;}" + ".dbg-sev{color:#F00}" + ".dbg-w{color:#E92}" + ".dbg-sh{background-color:#fd4;font-weight:bold;color:#000}" + ".dbg-i{color:#666}" + ".dbg-f{color:#999}" + ".dbg-ev{color:#0A0}" + ".dbg-m{color:#990}"
+};
+goog.debug.DebugWindow.prototype.writeInitialDocument_ = function() {
+  if(!this.win_) {
+    return
+  }this.win_.document.open();
+  var html = "<style>" + this.getStyleRules() + "</style>" + '<hr><div class="dbg-ev" style="text-align:center">' + this.welcomeMessage + "<br><small>Logger: " + this.identifier_ + "</small></div><hr>";
+  this.writeToLog_(html);
+  this.writeSavedMessages_()
+};
+goog.debug.DebugWindow.prototype.setCookie_ = function(key, value) {
+  key += this.identifier_;
+  document.cookie = key + "=" + encodeURIComponent(value) + ";expires=" + (new Date(goog.now() + goog.debug.DebugWindow.COOKIE_TIME)).toUTCString()
+};
+goog.debug.DebugWindow.prototype.getCookie_ = function(key, opt_default) {
+  return goog.debug.DebugWindow.getCookieValue_(this.identifier_, key, opt_default)
+};
+goog.debug.DebugWindow.getCookieValue_ = function(identifier, key, opt_default) {
+  var fullKey = key + identifier;
+  var cookie = String(document.cookie);
+  var start = cookie.indexOf(fullKey + "=");
+  if(start != -1) {
+    var end = cookie.indexOf(";", start);
+    return decodeURIComponent(cookie.substring(start + fullKey.length + 1, end == -1 ? cookie.length : end))
+  }else {
+    return opt_default || ""
+  }
+};
+goog.debug.DebugWindow.isEnabled = function(identifier) {
+  return goog.debug.DebugWindow.getCookieValue_(identifier, "enabled") == "1"
+};
+goog.debug.DebugWindow.prototype.saveWindowPositionSize_ = function() {
+  if(!this.win_ || this.win_.closed) {
+    return
+  }var x = this.win_.screenX || this.win_.screenLeft || 0;
+  var y = this.win_.screenY || this.win_.screenTop || 0;
+  var w = this.win_.outerWidth || 800;
+  var h = this.win_.outerHeight || 500;
+  this.setCookie_("dbg", x + "," + y + "," + w + "," + h)
+};
+goog.debug.DebugWindow.prototype.addFilter = function(loggerName) {
+  this.filteredLoggers_[loggerName] = 1
+};
+goog.debug.DebugWindow.prototype.removeFilter = function(loggerName) {
+  delete this.filteredLoggers_[loggerName]
+};
+// Input 33
 goog.provide("goog.dom.TagName");
-goog.dom.TagName = {A:"A", ABBR:"ABBR", ACRONYM:"ACRONYM", ADDRESS:"ADDRESS", APPLET:"APPLET", AREA:"AREA", B:"B", BASE:"BASE", BASEFONT:"BASEFONT", BDO:"BDO", BIG:"BIG", BLOCKQUOTE:"BLOCKQUOTE", BODY:"BODY", BR:"BR", BUTTON:"BUTTON", CANVAS:"CANVAS", CAPTION:"CAPTION", CENTER:"CENTER", CITE:"CITE", CODE:"CODE", COL:"COL", COLGROUP:"COLGROUP", DD:"DD", DEL:"DEL", DFN:"DFN", DIR:"DIR", DIV:"DIV", DL:"DL", DT:"DT", EM:"EM", FIELDSET:"FIELDSET", FONT:"FONT", FORM:"FORM", FRAME:"FRAME", FRAMESET:"FRAMESET", 
-H1:"H1", H2:"H2", H3:"H3", H4:"H4", H5:"H5", H6:"H6", HEAD:"HEAD", HR:"HR", HTML:"HTML", I:"I", IFRAME:"IFRAME", IMG:"IMG", INPUT:"INPUT", INS:"INS", ISINDEX:"ISINDEX", KBD:"KBD", LABEL:"LABEL", LEGEND:"LEGEND", LI:"LI", LINK:"LINK", MAP:"MAP", MENU:"MENU", META:"META", NOFRAMES:"NOFRAMES", NOSCRIPT:"NOSCRIPT", OBJECT:"OBJECT", OL:"OL", OPTGROUP:"OPTGROUP", OPTION:"OPTION", P:"P", PARAM:"PARAM", PRE:"PRE", Q:"Q", S:"S", SAMP:"SAMP", SCRIPT:"SCRIPT", SELECT:"SELECT", SMALL:"SMALL", SPAN:"SPAN", STRIKE:"STRIKE", 
+goog.dom.TagName = {A:"A", ABBR:"ABBR", ACRONYM:"ACRONYM", ADDRESS:"ADDRESS", APPLET:"APPLET", AREA:"AREA", B:"B", BASE:"BASE", BASEFONT:"BASEFONT", BDO:"BDO", BIG:"BIG", BLOCKQUOTE:"BLOCKQUOTE", BODY:"BODY", BR:"BR", BUTTON:"BUTTON", CAPTION:"CAPTION", CENTER:"CENTER", CITE:"CITE", CODE:"CODE", COL:"COL", COLGROUP:"COLGROUP", DD:"DD", DEL:"DEL", DFN:"DFN", DIR:"DIR", DIV:"DIV", DL:"DL", DT:"DT", EM:"EM", FIELDSET:"FIELDSET", FONT:"FONT", FORM:"FORM", FRAME:"FRAME", FRAMESET:"FRAMESET", H1:"H1", 
+H2:"H2", H3:"H3", H4:"H4", H5:"H5", H6:"H6", HEAD:"HEAD", HR:"HR", HTML:"HTML", I:"I", IFRAME:"IFRAME", IMG:"IMG", INPUT:"INPUT", INS:"INS", ISINDEX:"ISINDEX", KBD:"KBD", LABEL:"LABEL", LEGEND:"LEGEND", LI:"LI", LINK:"LINK", MAP:"MAP", MENU:"MENU", META:"META", NOFRAMES:"NOFRAMES", NOSCRIPT:"NOSCRIPT", OBJECT:"OBJECT", OL:"OL", OPTGROUP:"OPTGROUP", OPTION:"OPTION", P:"P", PARAM:"PARAM", PRE:"PRE", Q:"Q", S:"S", SAMP:"SAMP", SCRIPT:"SCRIPT", SELECT:"SELECT", SMALL:"SMALL", SPAN:"SPAN", STRIKE:"STRIKE", 
 STRONG:"STRONG", STYLE:"STYLE", SUB:"SUB", SUP:"SUP", TABLE:"TABLE", TBODY:"TBODY", TD:"TD", TEXTAREA:"TEXTAREA", TFOOT:"TFOOT", TH:"TH", THEAD:"THEAD", TITLE:"TITLE", TR:"TR", TT:"TT", U:"U", UL:"UL", VAR:"VAR"};
-// Input 39
+// Input 34
 goog.provide("goog.dom.classes");
 goog.require("goog.array");
 goog.dom.classes.set = function(element, className) {
@@ -3828,77 +3825,11 @@ goog.dom.classes.toggle = function(element, className) {
   goog.dom.classes.enable(element, className, add);
   return add
 };
-// Input 40
-goog.provide("goog.math.Size");
-goog.math.Size = function(width, height) {
-  this.width = width;
-  this.height = height
-};
-goog.math.Size.equals = function(a, b) {
-  if(a == b) {
-    return true
-  }if(!a || !b) {
-    return false
-  }return a.width == b.width && a.height == b.height
-};
-goog.math.Size.prototype.clone = function() {
-  return new goog.math.Size(this.width, this.height)
-};
-if(goog.DEBUG) {
-  goog.math.Size.prototype.toString = function() {
-    return"(" + this.width + " x " + this.height + ")"
-  }
-}goog.math.Size.prototype.getLongest = function() {
-  return Math.max(this.width, this.height)
-};
-goog.math.Size.prototype.getShortest = function() {
-  return Math.min(this.width, this.height)
-};
-goog.math.Size.prototype.area = function() {
-  return this.width * this.height
-};
-goog.math.Size.prototype.perimeter = function() {
-  return(this.width + this.height) * 2
-};
-goog.math.Size.prototype.aspectRatio = function() {
-  return this.width / this.height
-};
-goog.math.Size.prototype.isEmpty = function() {
-  return!this.area()
-};
-goog.math.Size.prototype.ceil = function() {
-  this.width = Math.ceil(this.width);
-  this.height = Math.ceil(this.height);
-  return this
-};
-goog.math.Size.prototype.fitsInside = function(target) {
-  return this.width <= target.width && this.height <= target.height
-};
-goog.math.Size.prototype.floor = function() {
-  this.width = Math.floor(this.width);
-  this.height = Math.floor(this.height);
-  return this
-};
-goog.math.Size.prototype.round = function() {
-  this.width = Math.round(this.width);
-  this.height = Math.round(this.height);
-  return this
-};
-goog.math.Size.prototype.scale = function(s) {
-  this.width *= s;
-  this.height *= s;
-  return this
-};
-goog.math.Size.prototype.scaleToFit = function(target) {
-  var s = this.aspectRatio() > target.aspectRatio() ? target.width / this.width : target.height / this.height;
-  return this.scale(s)
-};
-// Input 41
+// Input 35
 goog.provide("goog.dom");
 goog.provide("goog.dom.DomHelper");
 goog.provide("goog.dom.NodeType");
 goog.require("goog.array");
-goog.require("goog.dom.BrowserFeature");
 goog.require("goog.dom.TagName");
 goog.require("goog.dom.classes");
 goog.require("goog.math.Coordinate");
@@ -3924,32 +3855,10 @@ goog.dom.$ = goog.dom.getElement;
 goog.dom.getElementsByTagNameAndClass = function(opt_tag, opt_class, opt_el) {
   return goog.dom.getElementsByTagNameAndClass_(document, opt_tag, opt_class, opt_el)
 };
-goog.dom.getElementsByClass = function(className, opt_el) {
-  var parent = opt_el || document;
-  if(goog.dom.canUseQuerySelector_(parent)) {
-    return parent.querySelectorAll("." + className)
-  }else {
-    if(parent.getElementsByClassName) {
-      return parent.getElementsByClassName(className)
-    }
-  }return goog.dom.getElementsByTagNameAndClass_(document, "*", className, opt_el)
-};
-goog.dom.getElementByClass = function(className, opt_el) {
-  var parent = opt_el || document;
-  var retVal = null;
-  if(goog.dom.canUseQuerySelector_(parent)) {
-    retVal = parent.querySelector("." + className)
-  }else {
-    retVal = goog.dom.getElementsByClass(className, opt_el)[0]
-  }return retVal || null
-};
-goog.dom.canUseQuerySelector_ = function(parent) {
-  return parent.querySelectorAll && parent.querySelector && (!goog.userAgent.WEBKIT || goog.dom.isCss1CompatMode_(document) || goog.userAgent.isVersion("528"))
-};
 goog.dom.getElementsByTagNameAndClass_ = function(doc, opt_tag, opt_class, opt_el) {
   var parent = opt_el || doc;
   var tagName = opt_tag && opt_tag != "*" ? opt_tag.toUpperCase() : "";
-  if(goog.dom.canUseQuerySelector_(parent) && (tagName || opt_class)) {
+  if(parent.querySelectorAll && (tagName || opt_class) && (!goog.userAgent.WEBKIT || goog.dom.isCss1CompatMode_(doc) || goog.userAgent.isVersion("528"))) {
     var query = tagName + (opt_class ? "." + opt_class : "");
     return parent.querySelectorAll(query)
   }if(opt_class && parent.getElementsByClassName) {
@@ -4019,10 +3928,7 @@ goog.dom.getViewportSize_ = function(win) {
         innerHeight -= 15
       }
     }return new goog.math.Size(win.innerWidth, innerHeight)
-  }var readsFromDocumentElement = goog.dom.isCss1CompatMode_(doc);
-  if(goog.userAgent.OPERA && !goog.userAgent.isVersion("9.50")) {
-    readsFromDocumentElement = false
-  }var el = readsFromDocumentElement ? doc.documentElement : doc.body;
+  }var el = goog.dom.isCss1CompatMode_(doc) && (!goog.userAgent.OPERA || goog.userAgent.OPERA && goog.userAgent.isVersion("9.50")) ? doc.documentElement : doc.body;
   return new goog.math.Size(el.clientWidth, el.clientHeight)
 };
 goog.dom.getDocumentHeight = function() {
@@ -4080,15 +3986,13 @@ goog.dom.createDom = function(tagName, opt_attributes, var_args) {
 goog.dom.createDom_ = function(doc, args) {
   var tagName = args[0];
   var attributes = args[1];
-  if(!goog.dom.BrowserFeature.CAN_ADD_NAME_OR_TYPE_ATTRIBUTES && attributes && (attributes.name || attributes.type)) {
+  if(goog.userAgent.IE && attributes && (attributes.name || attributes.type)) {
     var tagNameArr = ["<", tagName];
     if(attributes.name) {
       tagNameArr.push(' name="', goog.string.htmlEscape(attributes.name), '"')
     }if(attributes.type) {
       tagNameArr.push(' type="', goog.string.htmlEscape(attributes.type), '"');
-      var clone = {};
-      goog.object.extend(clone, attributes);
-      attributes = clone;
+      attributes = goog.cloneObject(attributes);
       delete attributes.type
     }tagNameArr.push(">");
     tagName = tagNameArr.join("")
@@ -4097,30 +4001,23 @@ goog.dom.createDom_ = function(doc, args) {
     if(goog.isString(attributes)) {
       element.className = attributes
     }else {
-      if(goog.isArray(attributes)) {
-        goog.dom.classes.add.apply(null, [element].concat(attributes))
-      }else {
-        goog.dom.setProperties(element, attributes)
-      }
+      goog.dom.setProperties(element, attributes)
     }
   }if(args.length > 2) {
-    goog.dom.append_(doc, element, args, 2)
+    var childHandler = function(child) {
+      if(child) {
+        element.appendChild(goog.isString(child) ? doc.createTextNode(child) : child)
+      }
+    };
+    for(var i = 2;i < args.length;i++) {
+      var arg = args[i];
+      if(goog.isArrayLike(arg) && !goog.dom.isNodeLike(arg)) {
+        goog.array.forEach(goog.dom.isNodeList(arg) ? goog.array.clone(arg) : arg, childHandler)
+      }else {
+        childHandler(arg)
+      }
+    }
   }return element
-};
-goog.dom.append_ = function(doc, parent, args, startIndex) {
-  function childHandler(child) {
-    if(child) {
-      parent.appendChild(goog.isString(child) ? doc.createTextNode(child) : child)
-    }
-  }
-  for(var i = startIndex;i < args.length;i++) {
-    var arg = args[i];
-    if(goog.isArrayLike(arg) && !goog.dom.isNodeLike(arg)) {
-      goog.array.forEach(goog.dom.isNodeList(arg) ? goog.array.clone(arg) : arg, childHandler)
-    }else {
-      childHandler(arg)
-    }
-  }
 };
 goog.dom.$dom = goog.dom.createDom;
 goog.dom.createElement = function(name) {
@@ -4151,12 +4048,8 @@ goog.dom.htmlToDocumentFragment = function(htmlString) {
 };
 goog.dom.htmlToDocumentFragment_ = function(doc, htmlString) {
   var tempDiv = doc.createElement("div");
-  if(goog.dom.BrowserFeature.INNER_HTML_NEEDS_SCOPED_ELEMENT) {
-    tempDiv.innerHTML = "<br>" + htmlString;
-    tempDiv.removeChild(tempDiv.firstChild)
-  }else {
-    tempDiv.innerHTML = htmlString
-  }if(tempDiv.childNodes.length == 1) {
+  tempDiv.innerHTML = htmlString;
+  if(tempDiv.childNodes.length == 1) {
     return tempDiv.removeChild(tempDiv.firstChild)
   }else {
     var fragment = doc.createDocumentFragment();
@@ -4179,6 +4072,8 @@ goog.dom.isCss1CompatMode_ = function(doc) {
 goog.dom.canHaveChildren = function(node) {
   if(node.nodeType != goog.dom.NodeType.ELEMENT) {
     return false
+  }if("canHaveChildren" in node) {
+    return node.canHaveChildren
   }switch(node.tagName) {
     case goog.dom.TagName.APPLET:
     ;
@@ -4223,9 +4118,6 @@ goog.dom.canHaveChildren = function(node) {
 };
 goog.dom.appendChild = function(parent, child) {
   parent.appendChild(child)
-};
-goog.dom.append = function(parent, var_args) {
-  goog.dom.append_(goog.dom.getOwnerDocument(parent), parent, arguments, 1)
 };
 goog.dom.removeChildren = function(node) {
   var child;
@@ -4469,16 +4361,15 @@ goog.dom.setFocusableTabIndex = function(element, enable) {
 };
 goog.dom.getTextContent = function(node) {
   var textContent;
-  if(goog.dom.BrowserFeature.CAN_USE_INNER_TEXT && "innerText" in node) {
+  if(goog.userAgent.IE && "innerText" in node) {
     textContent = goog.string.canonicalizeNewlines(node.innerText)
   }else {
     var buf = [];
     goog.dom.getTextContent_(node, buf, true);
     textContent = buf.join("")
-  }textContent = textContent.replace(/ \xAD /g, " ").replace(/\xAD/g, "");
-  if(!goog.userAgent.IE) {
-    textContent = textContent.replace(/ +/g, " ")
-  }if(textContent != " ") {
+  }textContent = textContent.replace(/\xAD/g, "");
+  textContent = textContent.replace(/ +/g, " ");
+  if(textContent != " ") {
     textContent = textContent.replace(/^\s*/, "")
   }return textContent
 };
@@ -4594,14 +4485,6 @@ goog.dom.DomHelper.prototype.$ = goog.dom.DomHelper.prototype.getElement;
 goog.dom.DomHelper.prototype.getElementsByTagNameAndClass = function(opt_tag, opt_class, opt_el) {
   return goog.dom.getElementsByTagNameAndClass_(this.document_, opt_tag, opt_class, opt_el)
 };
-goog.dom.DomHelper.prototype.getElementsByClass = function(className, opt_el) {
-  var doc = opt_el || this.document_;
-  return goog.dom.getElementsByClass(className, doc)
-};
-goog.dom.DomHelper.prototype.getElementByClass = function(className, opt_el) {
-  var doc = opt_el || this.document_;
-  return goog.dom.getElementByClass(className, doc)
-};
 goog.dom.DomHelper.prototype.$$ = goog.dom.DomHelper.prototype.getElementsByTagNameAndClass;
 goog.dom.DomHelper.prototype.setProperties = goog.dom.setProperties;
 goog.dom.DomHelper.prototype.getViewportSize = function(opt_window) {
@@ -4610,7 +4493,6 @@ goog.dom.DomHelper.prototype.getViewportSize = function(opt_window) {
 goog.dom.DomHelper.prototype.getDocumentHeight = function() {
   return goog.dom.getDocumentHeight_(this.getWindow())
 };
-goog.dom.Appendable;
 goog.dom.DomHelper.prototype.createDom = function(tagName, opt_attributes, var_args) {
   return goog.dom.createDom_(this.document_, arguments)
 };
@@ -4643,7 +4525,6 @@ goog.dom.DomHelper.prototype.getDocumentScroll = function() {
   return goog.dom.getDocumentScroll_(this.document_)
 };
 goog.dom.DomHelper.prototype.appendChild = goog.dom.appendChild;
-goog.dom.DomHelper.prototype.append = goog.dom.append;
 goog.dom.DomHelper.prototype.removeChildren = goog.dom.removeChildren;
 goog.dom.DomHelper.prototype.insertSiblingBefore = goog.dom.insertSiblingBefore;
 goog.dom.DomHelper.prototype.insertSiblingAfter = goog.dom.insertSiblingAfter;
@@ -4669,12 +4550,704 @@ goog.dom.DomHelper.prototype.getNodeTextLength = goog.dom.getNodeTextLength;
 goog.dom.DomHelper.prototype.getNodeTextOffset = goog.dom.getNodeTextOffset;
 goog.dom.DomHelper.prototype.getAncestorByTagNameAndClass = goog.dom.getAncestorByTagNameAndClass;
 goog.dom.DomHelper.prototype.getAncestor = goog.dom.getAncestor;
-// Input 42
-goog.provide("goog.events.EventType");
+// Input 36
+goog.provide("goog.debug.FancyWindow");
+goog.require("goog.debug.DebugWindow");
+goog.require("goog.debug.LogManager");
+goog.require("goog.debug.Logger");
+goog.require("goog.debug.Logger.Level");
+goog.require("goog.dom.DomHelper");
+goog.require("goog.object");
 goog.require("goog.userAgent");
-goog.events.EventType = {CLICK:"click", DBLCLICK:"dblclick", MOUSEDOWN:"mousedown", MOUSEUP:"mouseup", MOUSEOVER:"mouseover", MOUSEOUT:"mouseout", MOUSEMOVE:"mousemove", SELECTSTART:"selectstart", KEYPRESS:"keypress", KEYDOWN:"keydown", KEYUP:"keyup", BLUR:"blur", FOCUS:"focus", DEACTIVATE:"deactivate", FOCUSIN:goog.userAgent.IE ? "focusin" : "DOMFocusIn", FOCUSOUT:goog.userAgent.IE ? "focusout" : "DOMFocusOut", CHANGE:"change", SELECT:"select", SUBMIT:"submit", INPUT:"input", PROPERTYCHANGE:"propertychange", 
-DRAGSTART:"dragstart", DRAGENTER:"dragenter", DRAGOVER:"dragover", DRAGLEAVE:"dragleave", DROP:"drop", TOUCHSTART:"touchstart", TOUCHMOVE:"touchmove", TOUCHEND:"touchend", TOUCHCANCEL:"touchcancel", CONTEXTMENU:"contextmenu", ERROR:"error", HELP:"help", LOAD:"load", LOSECAPTURE:"losecapture", READYSTATECHANGE:"readystatechange", RESIZE:"resize", SCROLL:"scroll", UNLOAD:"unload", HASHCHANGE:"hashchange", POPSTATE:"popstate"};
+goog.debug.FancyWindow = function(opt_identifier, opt_prefix) {
+  goog.debug.DebugWindow.call(this, opt_identifier, opt_prefix)
+};
+goog.inherits(goog.debug.FancyWindow, goog.debug.DebugWindow);
+goog.debug.FancyWindow.prototype.writeBufferToLog_ = function(html) {
+  this.lastCall_ = goog.now();
+  if(this.win_) {
+    var logel = this.dh_.getElement("log");
+    var scroll = logel.scrollHeight - (logel.scrollTop + logel.offsetHeight) <= 100;
+    for(var i = 0;i < this.outputBuffer_.length;i++) {
+      var div = this.dh_.createDom("div", "logmsg");
+      div.innerHTML = this.outputBuffer_[i];
+      logel.appendChild(div)
+    }this.outputBuffer_.length = 0;
+    this.resizeStuff_();
+    if(scroll) {
+      logel.scrollTop = logel.scrollHeight
+    }
+  }
+};
+goog.debug.FancyWindow.prototype.writeInitialDocument_ = function() {
+  if(!this.win_) {
+    return
+  }var doc = this.win_.document;
+  doc.open();
+  doc.write(this.getHtml_());
+  doc.close();
+  (goog.userAgent.IE ? doc.body : this.win_).onresize = goog.bind(this.resizeStuff_, this);
+  this.dh_ = new goog.dom.DomHelper(doc);
+  this.dh_.getElement("openbutton").onclick = goog.bind(this.openOptions_, this);
+  this.dh_.getElement("closebutton").onclick = goog.bind(this.closeOptions_, this);
+  this.dh_.getElement("clearbutton").onclick = goog.bind(this.clear_, this);
+  this.writeSavedMessages_()
+};
+goog.debug.FancyWindow.prototype.openOptions_ = function() {
+  var el = this.dh_.getElement("optionsarea");
+  el.innerHTML = "";
+  var loggers = goog.debug.FancyWindow.getLoggers_();
+  var dh = this.dh_;
+  for(var i = 0;i < loggers.length;i++) {
+    var logger = goog.debug.Logger.getLogger(loggers[i]);
+    var curlevel = logger.getLevel() ? logger.getLevel().name : "INHERIT";
+    var div = dh.createDom("div", {}, this.getDropDown_("sel" + loggers[i], curlevel), dh.createDom("span", {}, loggers[i] || "(root)"));
+    el.appendChild(div)
+  }this.dh_.getElement("options").style.display = "block";
+  return false
+};
+goog.debug.FancyWindow.prototype.getDropDown_ = function(id, selected) {
+  var dh = this.dh_;
+  var sel = dh.createDom("select", {id:id});
+  var levels = goog.debug.Logger.Level.PREDEFINED_LEVELS;
+  for(var i = 0;i < levels.length;i++) {
+    var level = levels[i];
+    var option = dh.createDom("option", {}, level.name);
+    if(selected == level.name) {
+      option.selected = true
+    }sel.appendChild(option)
+  }sel.appendChild(dh.createDom("option", {selected:selected == "INHERIT"}, "INHERIT"));
+  return sel
+};
+goog.debug.FancyWindow.prototype.closeOptions_ = function() {
+  this.dh_.getElement("options").style.display = "none";
+  var loggers = goog.debug.FancyWindow.getLoggers_();
+  var dh = this.dh_;
+  for(var i = 0;i < loggers.length;i++) {
+    var logger = goog.debug.Logger.getLogger(loggers[i]);
+    var sel = dh.getElement("sel" + loggers[i]);
+    var level = sel.options[sel.selectedIndex].text;
+    if(level == "INHERIT") {
+      logger.setLevel(null)
+    }else {
+      logger.setLevel(goog.debug.Logger.Level.getPredefinedLevel(level))
+    }
+  }return false
+};
+goog.debug.FancyWindow.prototype.resizeStuff_ = function() {
+  var dh = this.dh_;
+  var logel = dh.getElement("log");
+  var headel = dh.getElement("head");
+  logel.style.top = headel.offsetHeight + "px";
+  logel.style.height = dh.getDocument().body.offsetHeight - headel.offsetHeight - (goog.userAgent.IE ? 4 : 0) + "px"
+};
+goog.debug.FancyWindow.getLoggers_ = function() {
+  var loggers = goog.object.getKeys(goog.debug.LogManager.getLoggers());
+  loggers.sort();
+  return loggers
+};
+goog.debug.FancyWindow.prototype.getStyleRules = function() {
+  return goog.debug.FancyWindow.superClass_.getStyleRules.call(this) + "html,body{height:100%;width:100%;margin:0px;padding:0px;" + "background-color:#FFF;overflow:hidden}" + "*{}" + ".logmsg{border-bottom:1px solid #CCC;padding:2px;font:medium monospace;}" + "#head{position:absolute;width:100%;font:x-small arial;" + "border-bottom:2px solid #999;background-color:#EEE;}" + "#head p{margin:0px 5px;}" + "#log{position:absolute;width:100%;background-color:#FFF;}" + "#options{position:absolute;right:0px;width:50%;height:100%;border-left:" + 
+  "1px solid #999;background-color:#DDD;display:none;padding-left: 5px;" + "font:normal small arial;overflow:auto;}" + "#openbutton,#closebutton{text-decoration:underline;color:#00F;cursor:" + "pointer;position:absolute;top:0px;right:5px;font:x-small arial;}" + "#clearbutton{text-decoration:underline;color:#00F;cursor:" + "pointer;position:absolute;top:0px;right:50px;font:x-small arial;}" + "select{font:x-small arial;margin-right:10px;}" + "hr{border:0;height:5px;background-color:#8c8;color:#8c8;}"
+};
+goog.debug.FancyWindow.prototype.getHtml_ = function() {
+  return"" + '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"' + '"http://www.w3.org/TR/html4/loose.dtd">' + "<html><head><title>Logging: " + this.identifier_ + "</title>" + "<style>" + this.getStyleRules() + "</style>" + "</head><body>" + '<div id="log" style="overflow:auto"></div>' + '<div id="head">' + "<p><b>Logging: " + this.identifier_ + "</b></p><p>" + this.welcomeMessage + "</p>" + '<span id="clearbutton">clear</span>' + '<span id="openbutton">options</span>' + "</div>" + '<div id="options">' + 
+  "<big><b>Options:</b></big>" + '<div id="optionsarea"></div>' + '<span id="closebutton">save and close</span>' + "</div>" + "</body></html>"
+};
+// Input 37
+goog.provide("kemia.view.SingleUpOrDownBondRenderer");
+goog.require("kemia.view.BondRenderer");
+goog.require("goog.debug");
+goog.require("goog.debug.FancyWindow");
+goog.require("goog.debug.Logger");
+kemia.view.SingleUpOrDownBondRenderer = function(graphics, opt_config) {
+  kemia.view.BondRenderer.call(this, graphics, kemia.view.SingleUpOrDownBondRenderer.defaultConfig, opt_config)
+};
+goog.inherits(kemia.view.SingleUpOrDownBondRenderer, kemia.view.BondRenderer);
+kemia.view.SingleUpOrDownBondRenderer.prototype.render = function(bond, transform, bondPath) {
+  this.setTransform(transform);
+  var zigZags = Math.round(goog.math.Coordinate.distance(bond.source.coord, bond.target.coord) * 12);
+  if(zigZags < 8) {
+    zigZags = 8
+  }this.logger.fine("# zigZags " + zigZags);
+  var strokeWidth = this.config.get("bond")["stroke"]["width"] / 10;
+  var theta = kemia.view.BondRenderer.getTheta(bond);
+  var angle_left = theta + Math.PI / 2;
+  var angle_right = theta - Math.PI / 2;
+  zzCoords = new Array;
+  zzCoords.push(bond.source.coord);
+  this.logger.fine("# coords " + zzCoords.length);
+  var trans = null;
+  var inc = 1 / zigZags;
+  var corr = 0;
+  for(z = 1;z <= zigZags;z++) {
+    corr += inc;
+    if(z % 2 == 0) {
+      trans = new kemia.graphics.AffineTransform(1, 0, 0, 1, Math.cos(angle_left) * strokeWidth * corr, Math.sin(angle_left) * strokeWidth * corr)
+    }else {
+      trans = new kemia.graphics.AffineTransform(1, 0, 0, 1, Math.cos(angle_right) * strokeWidth * corr, Math.sin(angle_right) * strokeWidth * corr)
+    }var zX = ((zigZags - z) * bond.source.coord.x + bond.target.coord.x * z) / zigZags;
+    var zY = ((zigZags - z) * bond.source.coord.y + bond.target.coord.y * z) / zigZags;
+    var intermediateTarget = trans.transformCoords([new goog.math.Coordinate(zX, zY)])[0];
+    zzCoords.push(intermediateTarget)
+  }var coords = transform.transformCoords(zzCoords);
+  bondPath.moveTo(coords[1].x, coords[1].y);
+  for(i = 2, max = coords.length - 1;i < max;i++) {
+    bondPath.lineTo(coords[i].x, coords[i].y);
+    bondPath.moveTo(coords[i].x, coords[i].y)
+  }
+};
+// Input 38
+goog.provide("kemia.model.Flags");
+kemia.model.Flags.ISPLACED = 0;
+kemia.model.Flags.VISITED = 1;
+kemia.model.Flags.ISINRING = 2;
+kemia.model.Flags.MAX_FLAG_INDEX = 2;
+// Input 39
+goog.provide("kemia.resource.Covalence");
+kemia.resource.Covalence = {C:4, Si:4, N:3, P:3, O:2, S:2, H:1};
+// Input 40
+goog.provide("kemia.model.Atom");
+goog.provide("kemia.model.Atom.Hybridizations");
+goog.require("kemia.model.Flags");
+goog.require("kemia.resource.Covalence");
+goog.require("goog.structs.Set");
+goog.require("goog.math.Coordinate");
+kemia.model.Atom = function(opt_symbol, opt_x, opt_y, opt_charge, opt_aromatic, opt_isotope) {
+  this.symbol = goog.isDef(opt_symbol) ? opt_symbol : "C";
+  var x = goog.isDef(opt_x) ? opt_x : 0;
+  var y = goog.isDef(opt_y) ? opt_y : 0;
+  this.coord = new goog.math.Coordinate(x, y);
+  this.bonds = new goog.structs.Set;
+  this.charge = goog.isDef(opt_charge) ? opt_charge : 0;
+  this.isotope = goog.isDef(opt_isotope) ? opt_isotope : 0;
+  this.aromatic = goog.isDef(opt_aromatic) ? opt_aromatic : false;
+  this.hybridization = null;
+  this.flags = new Array(kemia.model.Flags.MAX_FLAG_INDEX + 1)
+};
+goog.exportSymbol("kemia.model.Atom", kemia.model.Atom);
+kemia.model.Atom.prototype.getSymbol = function() {
+  return this.symbol
+};
+goog.exportSymbol("kemia.model.Atom.prototype.getSymbol", kemia.model.Atom.prototype.getSymbol);
+kemia.model.Atom.prototype.getCharge = function() {
+  return this.charge
+};
+goog.exportSymbol("kemia.model.Atom.prototype.getCharge", kemia.model.Atom.prototype.getCharge);
+kemia.model.Atom.prototype.countBonds = function() {
+  return this.bonds.getCount()
+};
+kemia.model.Atom.prototype.hydrogenCount = function() {
+  var cov = kemia.resource.Covalence[this.symbol];
+  var bond_array = this.bonds.getValues();
+  var totalBondOrder = goog.array.reduce(bond_array, function(r, v) {
+    return r + v.order
+  }, 0);
+  var hydrogenCount = 0;
+  if(cov) {
+    hydrogenCount = cov - totalBondOrder + this.charge
+  }return hydrogenCount
+};
+goog.exportSymbol("kemia.model.Atom.prototype.hydrogenCount", kemia.model.Atom.prototype.hydrogenCount);
+kemia.model.Atom.prototype.getNeighbors = function() {
+  var bonds = this.bonds.getValues();
+  var nbrs = [];
+  for(var i = 0, li = bonds.length;i < li;i++) {
+    nbrs.push(bonds[i].otherAtom(this))
+  }return nbrs
+};
+kemia.model.Atom.nextBondAngle = function(atom) {
+  var bonds = atom.bonds.getValues();
+  var new_angle;
+  if(bonds.length == 0) {
+    new_angle = 0
+  }else {
+    if(bonds.length == 1) {
+      var other_atom = bonds[0].otherAtom(atom);
+      var existing_angle = goog.math.angle(atom.coord.x, atom.coord.y, other_atom.coord.x, other_atom.coord.y);
+      var other_angles_diff = goog.array.map(other_atom.bonds.getValues(), function(b) {
+        var not_other = b.otherAtom(other_atom);
+        if(not_other != atom) {
+          return goog.math.angleDifference(existing_angle, goog.math.angle(other_atom.coord.x, other_atom.coord.y, not_other.coord.x, not_other.coord.y))
+        }
+      });
+      goog.array.sort(other_angles_diff);
+      var min_angle = other_angles_diff[0];
+      if(min_angle > 0) {
+        new_angle = existing_angle - 120
+      }else {
+        new_angle = existing_angle + 120
+      }
+    }else {
+      if(bonds.length == 2) {
+        var angles = goog.array.map(bonds, function(bond) {
+          var other_atom = bond.otherAtom(atom);
+          return goog.math.angle(atom.coord.x, atom.coord.y, other_atom.coord.x, other_atom.coord.y)
+        });
+        var diff = goog.math.angleDifference(angles[0], angles[1]);
+        if(Math.abs(diff) < 180) {
+          diff = 180 + diff / 2
+        }else {
+          diff = diff / 2
+        }new_angle = angles[0] + diff
+      }else {
+        if(bonds.length == 3) {
+          goog.array.sort(bonds, function(b1, b2) {
+            return goog.array.defaultCompare(b1.otherAtom(atom).bonds.getValues().length, b2.otherAtom(atom).bonds.getValues().length)
+          });
+          var insert_between = goog.array.slice(bonds, 0, 2);
+          var angles = goog.array.map(insert_between, function(b) {
+            var other_atom = b.otherAtom(atom);
+            return goog.math.angle(atom.coord.x, atom.coord.y, other_atom.coord.x, other_atom.coord.y)
+          });
+          new_angle = angles[0] + goog.math.angleDifference(angles[0], angles[1]) / 2
+        }
+      }
+    }
+  }return new_angle
+};
+kemia.model.Atom.prototype.clone = function() {
+  return new kemia.model.Atom(this.symbol, this.coord.x, this.coord.y, this.charge, this.aromatic, this.isotope)
+};
+kemia.model.Atom.Hybridizations = {S:0, SP1:1, SP2:2, SP3:3, PLANAR3:4, SP3D1:5, SP3D2:6, SP3D3:7, SP3D4:8, SP3D5:9};
+kemia.model.Atom.prototype.setFlag = function(flag_type, flag_value) {
+  this.flags[flag_type] = flag_value
+};
+kemia.model.Atom.prototype.toString = function() {
+  return"kemia.model.Atom [" + this.symbol + "] " + this.coord.toString()
+};
+// Input 41
+goog.provide("kemia.model.Bond");
+goog.require("kemia.model.Atom");
+kemia.model.Bond = function(source, target, opt_order, opt_stereo, opt_aromatic, opt_molecule) {
+  this.source = source;
+  this.target = target;
+  this.order = goog.isDef(opt_order) ? opt_order : kemia.model.Bond.ORDER.SINGLE;
+  this.stereo = goog.isDef(opt_stereo) ? opt_stereo : kemia.model.Bond.STEREO.NOT_STEREO;
+  this.aromatic = goog.isDef(opt_aromatic) ? opt_aromatic : false;
+  this.molecule = goog.isDef(opt_molecule) ? opt_molecule : null
+};
+goog.exportSymbol("kemia.model.Bond", kemia.model.Bond);
+kemia.model.Bond.prototype.otherAtom = function(atom) {
+  if(atom === this.source) {
+    return this.target
+  }if(atom === this.target) {
+    return this.source
+  }return null
+};
+kemia.model.Bond.prototype.getLength = function() {
+  return goog.math.Coordinate.distance(this.source.coord, this.target.coord)
+};
+kemia.model.Bond.prototype.clone = function() {
+  return new kemia.model.Bond(this.source, this.target, this.order, this.stereo, this.aromatic, this.molecule)
+};
+kemia.model.Bond.prototype.deepClone = function() {
+  return new kemia.model.Bond(this.source.clone(), this.target.clone(), this.order, this.stereo, this.aromatic, this.molecule)
+};
+kemia.model.Bond.ORDER = {SINGLE:1, DOUBLE:2, TRIPLE:3, QUADRUPLE:4};
+kemia.model.Bond.STEREO = {NOT_STEREO:10, UP:11, UP_OR_DOWN:12, DOWN:13};
+kemia.model.Bond.prototype.toString = function() {
+  var molname = this.molecule ? this.molecule.name : "no molecule";
+  return"kemia.model.Bond[" + this.order + ", " + this.stereo + "]  " + this.source.toString() + " -- " + this.target.toString() + " mol: " + molname
+};
+// Input 42
+goog.provide("goog.reflect");
+goog.reflect.object = function(type, object) {
+  return object
+};
 // Input 43
+goog.provide("kemia.view.BondRendererFactory");
+goog.require("kemia.view.SingleBondRenderer");
+goog.require("kemia.view.DoubleBondRenderer");
+goog.require("kemia.view.TripleBondRenderer");
+goog.require("kemia.view.QuadrupleBondRenderer");
+goog.require("kemia.view.SingleUpBondRenderer");
+goog.require("kemia.view.SingleDownBondRenderer");
+goog.require("kemia.view.SingleUpOrDownBondRenderer");
+goog.require("kemia.model.Bond");
+goog.require("goog.object");
+goog.require("goog.reflect");
+kemia.view.BondRendererFactory = function(graphics, opt_config) {
+  this.graphics = graphics;
+  this.config = new goog.structs.Map;
+  if(opt_config) {
+    this.config.addAll(opt_config)
+  }
+};
+kemia.view.BondRendererFactory.prototype.logger = goog.debug.Logger.getLogger("kemia.view.BondRendererFactory");
+kemia.view.BondRendererFactory.ORDER_RENDERER = goog.object.transpose(goog.reflect.object(kemia.view.BondRendererFactory, {getSingleBondRenderer:kemia.model.Bond.ORDER.SINGLE, getDoubleBondRenderer:kemia.model.Bond.ORDER.DOUBLE, getTripleBondRenderer:kemia.model.Bond.ORDER.TRIPLE, getQuadrupleBondRenderer:kemia.model.Bond.ORDER.QUADRUPLE}));
+kemia.view.BondRendererFactory.STEREO_RENDERER = goog.object.transpose(goog.reflect.object(kemia.view.BondRendererFactory, {getSingleBondNotStereoRenderer:kemia.model.Bond.STEREO.NOT_STEREO, getSingleBondUpRenderer:kemia.model.Bond.STEREO.UP, getSingleBondDownRenderer:kemia.model.Bond.STEREO.DOWN, getSingleBondUpOrDownRenderer:kemia.model.Bond.STEREO.UP_OR_DOWN}));
+kemia.view.BondRendererFactory.prototype.get = function(bond) {
+  return this[kemia.view.BondRendererFactory.ORDER_RENDERER[bond.order]].apply(this, [bond.stereo])
+};
+kemia.view.BondRendererFactory.prototype.getSingleBondRenderer = function(stereo) {
+  return this[kemia.view.BondRendererFactory.STEREO_RENDERER[stereo]].apply(this)
+};
+kemia.view.BondRendererFactory.prototype.getSingleBondNotStereoRenderer = function() {
+  if(!this.singleNotStereoBondRenderer) {
+    this.singleNotStereoBondRenderer = new kemia.view.SingleBondRenderer(this.graphics, this.config)
+  }return this.singleNotStereoBondRenderer
+};
+kemia.view.BondRendererFactory.prototype.getSingleBondUpRenderer = function() {
+  if(!this.singleUpBondRenderer) {
+    this.singleUpBondRenderer = new kemia.view.SingleUpBondRenderer(this.graphics, this.config)
+  }return this.singleUpBondRenderer
+};
+kemia.view.BondRendererFactory.prototype.getSingleBondDownRenderer = function() {
+  if(!this.singleDownBondRenderer) {
+    this.singleDownBondRenderer = new kemia.view.SingleDownBondRenderer(this.graphics, this.config)
+  }return this.singleDownBondRenderer
+};
+kemia.view.BondRendererFactory.prototype.getSingleBondUpOrDownRenderer = function() {
+  if(!this.singleUpOrDownBondRenderer) {
+    this.singleUpOrDownBondRenderer = new kemia.view.SingleUpOrDownBondRenderer(this.graphics, this.config)
+  }return this.singleUpOrDownBondRenderer
+};
+kemia.view.BondRendererFactory.prototype.getDoubleBondRenderer = function() {
+  if(!this.doubleBondRenderer) {
+    this.doubleBondRenderer = new kemia.view.DoubleBondRenderer(this.graphics, this.config)
+  }return this.doubleBondRenderer
+};
+kemia.view.BondRendererFactory.prototype.getTripleBondRenderer = function() {
+  if(!this.tripleBondRenderer) {
+    this.tripleBondRenderer = new kemia.view.TripleBondRenderer(this.graphics, this.config)
+  }return this.tripleBondRenderer
+};
+kemia.view.BondRendererFactory.prototype.getQuadrupleBondRenderer = function() {
+  if(!this.quadrupleBondRenderer) {
+    this.quadrupleBondRenderer = new kemia.view.QuadrupleBondRenderer(this.graphics, this.config)
+  }return this.quadrupleBondRenderer
+};
+// Input 44
+goog.provide("kemia.view.AtomRenderer");
+goog.require("kemia.view.Renderer");
+goog.require("goog.debug.Logger");
+kemia.view.AtomRenderer = function(graphics, opt_config) {
+  kemia.view.Renderer.call(this, graphics, kemia.view.AtomRenderer.defaultConfig, opt_config)
+};
+goog.inherits(kemia.view.AtomRenderer, kemia.view.Renderer);
+kemia.view.AtomRenderer.prototype.render = function(atom, transform, opt_group) {
+  this.setTransform(transform);
+  var atom_config = this.config.get("atom");
+  var color = this.config.get(atom.symbol) ? this.config.get(atom.symbol)["color"] : atom_config["color"];
+  var scale = transform.getScaleX();
+  var fontSize = scale / 1.8 > 12 ? 15 : scale / 1.8;
+  var font = new goog.graphics.Font(fontSize, atom_config["fontName"]);
+  var stroke = new goog.graphics.Stroke(atom_config["stroke"]["width"], "black");
+  var fill = new goog.graphics.SolidFill(color);
+  var point = transform.transformCoords([atom.coord])[0];
+  var symbol = this.compoundSymbol(atom);
+  var graphics = this.graphics;
+  var w = symbol.text.length * 0.55 * font.size;
+  var h = font.size;
+  if(symbol.text) {
+    graphics.drawText(symbol.text, point.x - w / 2, point.y - h / 2, w, h, symbol.justification, null, font, stroke, fill, opt_group);
+    if(symbol.justification == "left") {
+      if(symbol.subscript || symbol.superscript) {
+        var subSize = this.config.get("subscriptSize");
+        if(symbol.subscript) {
+          graphics.drawText(symbol.subscript, point.x + w * 0.9, point.y, subSize, subSize, "center", null, font, stroke, fill, opt_group)
+        }if(symbol.superscript) {
+          graphics.drawText(symbol.superscript, point.x + w, point.y - h * 0.8, subSize, subSize, "center", null, font, stroke, fill, opt_group)
+        }
+      }
+    }else {
+      if(symbol.justification == "right") {
+        if(symbol.subscript || symbol.superscript) {
+          var subSize = this.config.get("subscriptSize");
+          if(symbol.subscript) {
+            graphics.drawText("H", point.x - w * 3, point.y - h / 2, w, h, "center", null, font, stroke, fill, opt_group);
+            graphics.drawText(symbol.subscript, point.x - w * 1.8, point.y, subSize, subSize, "center", null, font, stroke, fill, opt_group)
+          }if(symbol.superscript) {
+            graphics.drawText(symbol.superscript, point.x + w, point.y - h * 0.8, subSize, subSize, "center", null, font, stroke, fill, opt_group)
+          }
+        }
+      }
+    }
+  }
+};
+kemia.view.AtomRenderer.prototype.highlightOn = function(atom, opt_color, opt_group) {
+  var atom_config = this.config.get("atom");
+  var strokeWidth = atom_config["stroke"]["width"] * 24;
+  if(!opt_color) {
+    opt_color = this.config.get(atom.symbol) ? this.config.get(atom.symbol)["color"] : atom_config["color"]
+  }var stroke = null;
+  var fill = new goog.graphics.SolidFill(opt_color, 0.3);
+  var radius = atom_config["highlight"]["radius"] * this.transform.getScaleX();
+  var coords = this.transform.transformCoords([atom.coord])[0];
+  if(!opt_group) {
+    opt_group = this.graphics.createGroup()
+  }this.graphics.drawCircle(coords.x, coords.y, radius, stroke, fill, opt_group);
+  return opt_group
+};
+kemia.view.AtomRenderer.prototype.compoundSymbol = function(atom) {
+  var retval = {text:"", justification:"center", superscript:"", subscript:""};
+  if(atom.symbol != "C" || atom.countBonds() <= 1 || atom.charge) {
+    var hydrogen_count = atom.hydrogenCount();
+    if(hydrogen_count == 0) {
+      retval.text = atom.symbol
+    }else {
+      bond_direction = kemia.view.AtomRenderer.bondDirection(atom);
+      var justification = "center";
+      if(bond_direction == "SW" || bond_direction == "W" || bond_direction == "NW") {
+        justification = "right";
+        if(hydrogen_count == 1) {
+          retval.text = "H"
+        }retval.text += atom.symbol
+      }else {
+        justification = "left";
+        retval.text = atom.symbol + "H"
+      }if(hydrogen_count > 1) {
+        retval.subscript = String(hydrogen_count)
+      }
+    }if(atom.charge) {
+      if(atom.charge > 1) {
+        retval.superscript += "+" + atom.charge
+      }else {
+        if(atom.charge < -1) {
+          retval.superscript += atom.charge
+        }else {
+          if(atom.charge == -1) {
+            retval.superscript = "-"
+          }else {
+            if(atom.charge == 1) {
+              retval.superscript = "+"
+            }
+          }
+        }
+      }
+    }
+  }else {
+    retval.text = ""
+  }retval.justification = justification;
+  return retval
+};
+kemia.view.AtomRenderer.bondOrientation = function(atom, i) {
+  if(atom.bonds.getValues().length == 0) {
+    return 0
+  }var bond = atom.bonds.getValues()[i];
+  var target = bond.target.coord;
+  var source = bond.source.coord;
+  var dy = target.y - source.y;
+  var dx = target.x - source.x;
+  if(atom == bond.source) {
+    dx = -dx;
+    dy = -dy
+  }var angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  if(angle < 0) {
+    angle = 360 + angle
+  }return angle
+};
+kemia.view.AtomRenderer.bondDirection = function(atom) {
+  var nbonds = atom.bonds.getCount();
+  var angle = kemia.view.AtomRenderer.bondOrientation(atom, 0);
+  if(nbonds > 1) {
+    for(var i = 1;i < nbonds;++i) {
+      angle += kemia.view.AtomRenderer.bondOrientation(atom, i)
+    }angle = angle / nbonds % 360
+  }if(angle > 350 || angle <= 10) {
+    return"E"
+  }else {
+    if(angle > 10 && angle <= 80) {
+      return"SE"
+    }else {
+      if(angle > 80 && angle <= 100) {
+        return"S"
+      }else {
+        if(angle > 100 && angle <= 170) {
+          return"SW"
+        }else {
+          if(angle > 170 && angle <= 190) {
+            return"W"
+          }else {
+            if(angle > 190 && angle <= 260) {
+              return"NW"
+            }else {
+              if(angle > 260 && angle <= 280) {
+                return"N"
+              }else {
+                return"NE"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+kemia.view.AtomRenderer.prototype.logger = goog.debug.Logger.getLogger("kemia.view.AtomRenderer");
+kemia.view.AtomRenderer.defaultConfig = {atom:{color:"#FF9999", diameter:0.05, highlight:{radius:0.3}, stroke:{width:0.15}, fontName:"Arial"}, margin:20, subscriptSize:5, N:{color:"blue"}, O:{color:"red"}, S:{color:"yellow"}, P:{color:"orange"}, Cl:{color:"green"}, F:{color:"green"}, Br:{color:"DarkRed"}, I:{color:"purple"}, C:{color:"black"}, R1:{color:"black"}, R2:{color:"black"}, H:{color:"white"}};
+// Input 45
+goog.provide("kemia.view.AromaticityRenderer");
+goog.require("kemia.view.BondRenderer");
+kemia.view.AromaticityRenderer = function(graphics, opt_config) {
+  kemia.view.BondRenderer.call(this, graphics, kemia.view.AromaticityRenderer.defaultConfig, opt_config)
+};
+goog.inherits(kemia.view.AromaticityRenderer, kemia.view.BondRenderer);
+kemia.view.AromaticityRenderer.prototype.render = function(ring, transform) {
+  this.setTransform(transform);
+  var bondFill = null;
+  var strokeWidth = this.config.get("bond")["stroke"]["width"];
+  var bondStroke = new goog.graphics.Stroke(strokeWidth, this.config.get("bond")["stroke"]["color"]);
+  var aromaticCircle = new goog.graphics.Path;
+  var ringCenter = this.transform.transformCoords([ring.getCenter()])[0];
+  var circleRadiusProportion = 0.5;
+  var anyAtomCoord = this.transform.transformCoords([ring.atoms[0].coord])[0];
+  var spokeSize = goog.math.Coordinate.distance(ringCenter, anyAtomCoord);
+  var omeletRadius = spokeSize * circleRadiusProportion;
+  aromaticCircle.moveTo(ringCenter.x + omeletRadius, ringCenter.y);
+  aromaticCircle.arcTo(omeletRadius, omeletRadius, 0, 180);
+  aromaticCircle.moveTo(ringCenter.x + omeletRadius, ringCenter.y);
+  aromaticCircle.arcTo(omeletRadius, omeletRadius, 0, -180);
+  this.graphics.drawPath(aromaticCircle, bondStroke, bondFill)
+};
+// Input 46
+goog.provide("goog.debug.Error");
+goog.debug.Error = function(opt_msg) {
+  this.stack = (new Error).stack || "";
+  if(opt_msg) {
+    this.message = String(opt_msg)
+  }
+};
+goog.inherits(goog.debug.Error, Error);
+goog.debug.Error.prototype.name = "CustomError";
+// Input 47
+goog.provide("goog.asserts");
+goog.provide("goog.asserts.AssertionError");
+goog.require("goog.debug.Error");
+goog.require("goog.string");
+goog.asserts.ENABLE_ASSERTS = goog.DEBUG;
+goog.asserts.AssertionError = function(messagePattern, messageArgs) {
+  messageArgs.unshift(messagePattern);
+  goog.debug.Error.call(this, goog.string.subs.apply(null, messageArgs));
+  messageArgs.shift();
+  this.messagePattern = messagePattern
+};
+goog.inherits(goog.asserts.AssertionError, goog.debug.Error);
+goog.asserts.AssertionError.prototype.name = "AssertionError";
+goog.asserts.doAssertFailure_ = function(defaultMessage, defaultArgs, givenMessage, givenArgs) {
+  var message = "Assertion failed";
+  if(givenMessage) {
+    message += ": " + givenMessage;
+    var args = givenArgs
+  }else {
+    if(defaultMessage) {
+      message += ": " + defaultMessage;
+      args = defaultArgs
+    }
+  }throw new goog.asserts.AssertionError("" + message, args || []);
+};
+goog.asserts.assert = function(condition, opt_message, var_args) {
+  if(goog.asserts.ENABLE_ASSERTS && !condition) {
+    goog.asserts.doAssertFailure_("", null, opt_message, Array.prototype.slice.call(arguments, 2))
+  }
+};
+goog.asserts.fail = function(opt_message, var_args) {
+  if(goog.asserts.ENABLE_ASSERTS) {
+    throw new goog.asserts.AssertionError("Failure" + (opt_message ? ": " + opt_message : ""), Array.prototype.slice.call(arguments, 1));
+  }
+};
+goog.asserts.assertNumber = function(value, opt_message, var_args) {
+  if(goog.asserts.ENABLE_ASSERTS && !goog.isNumber(value)) {
+    goog.asserts.doAssertFailure_("Expected number but got %s.", [value], opt_message, Array.prototype.slice.call(arguments, 2))
+  }return value
+};
+goog.asserts.assertString = function(value, opt_message, var_args) {
+  if(goog.asserts.ENABLE_ASSERTS && !goog.isString(value)) {
+    goog.asserts.doAssertFailure_("Expected string but got %s.", [value], opt_message, Array.prototype.slice.call(arguments, 2))
+  }return value
+};
+goog.asserts.assertFunction = function(value, opt_message, var_args) {
+  if(goog.asserts.ENABLE_ASSERTS && !goog.isFunction(value)) {
+    goog.asserts.doAssertFailure_("Expected function but got %s.", [value], opt_message, Array.prototype.slice.call(arguments, 2))
+  }return value
+};
+goog.asserts.assertObject = function(value, opt_message, var_args) {
+  if(goog.asserts.ENABLE_ASSERTS && !goog.isObject(value)) {
+    goog.asserts.doAssertFailure_("Expected object but got %s.", [value], opt_message, Array.prototype.slice.call(arguments, 2))
+  }return value
+};
+goog.asserts.assertArray = function(value, opt_message, var_args) {
+  if(goog.asserts.ENABLE_ASSERTS && !goog.isArray(value)) {
+    goog.asserts.doAssertFailure_("Expected array but got %s.", [value], opt_message, Array.prototype.slice.call(arguments, 2))
+  }return value
+};
+goog.asserts.assertInstanceof = function(value, type, opt_message, var_args) {
+  if(goog.asserts.ENABLE_ASSERTS && !(value instanceof type)) {
+    goog.asserts.doAssertFailure_("instanceof check failed.", null, opt_message, Array.prototype.slice.call(arguments, 3))
+  }
+};
+// Input 48
+goog.provide("kemia.view.MoleculeRenderer");
+goog.require("kemia.view.BondRenderer");
+goog.require("kemia.view.BondRendererFactory");
+goog.require("kemia.view.AtomRenderer");
+goog.require("kemia.view.AromaticityRenderer");
+goog.require("goog.asserts");
+kemia.view.MoleculeRenderer = function(graphics, opt_config) {
+  kemia.view.Renderer.call(this, graphics, kemia.view.MoleculeRenderer.defaultConfig, opt_config);
+  this.scale_factor = 1;
+  this.bondRendererFactory = new kemia.view.BondRendererFactory(graphics, this.config);
+  this.atomRenderer = new kemia.view.AtomRenderer(graphics, this.config);
+  this.aromaticityRenderer = new kemia.view.AromaticityRenderer(graphics, this.config)
+};
+goog.inherits(kemia.view.MoleculeRenderer, kemia.view.Renderer);
+kemia.view.MoleculeRenderer.prototype.logger = goog.debug.Logger.getLogger("kemia.view.MoleculeRenderer");
+kemia.view.MoleculeRenderer.prototype.setScaleFactor = function(scale) {
+  this.scale_factor = scale
+};
+kemia.view.MoleculeRenderer.prototype.render = function(molecule, trans) {
+  molecule.resetRingCenters();
+  molecule.group = this.graphics.createGroup();
+  var atom_coords = goog.array.map(molecule.atoms, function(a) {
+    return a.coord
+  });
+  var box = goog.math.Box.boundingBox.apply(null, atom_coords);
+  if(!trans) {
+    var m = this.config.get("margin");
+    var ex_box = box.expand(m, m, m, m);
+    trans = this.buildTransform(ex_box)
+  }this.setTransform(trans);
+  var center = new goog.math.Coordinate((box.left + box.right) / 2, (box.top + box.bottom) / 2);
+  var t_center = this.transform.transformCoords([center])[0];
+  var rx = Math.abs(this.transform.getScaleX() * (box.right - box.left) / 2);
+  var ry = Math.abs(this.transform.getScaleY() * (box.bottom - box.top) / 2);
+  var bondStroke = new goog.graphics.Stroke(this.config.get("bond")["stroke"]["width"], this.config.get("bond")["stroke"]["color"]);
+  var bondFill = new goog.graphics.SolidFill(this.config.get("bond")["fill"]["color"]);
+  if(molecule.bonds.length) {
+    var bondPath = new goog.graphics.Path;
+    goog.array.forEach(molecule.bonds, function(bond) {
+      this.bondRendererFactory.get(bond).render(bond, trans, bondPath)
+    }, this);
+    this.graphics.drawPath(bondPath, bondStroke, bondFill, molecule.group);
+    var aromRingRenderer = this.aromaticityRenderer;
+    goog.array.forEach(molecule.getRings(), function(ring) {
+      var aromatic_bonds = goog.array.filter(ring.bonds, function(b) {
+        return b.aromatic
+      });
+      if(aromatic_bonds.length == ring.bonds.length) {
+        aromRingRenderer.render(ring, trans)
+      }
+    })
+  }goog.array.forEach(molecule.atoms, function(atom) {
+    this.atomRenderer.render(atom, trans, molecule.group)
+  }, this)
+};
+kemia.view.MoleculeRenderer.prototype.highlightOn = function(molecule, opt_color, opt_group) {
+  if(!opt_color) {
+    opt_color = this.config.get("highlight")["color"]
+  }if(!opt_group) {
+    opt_group = this.graphics.createGroup()
+  }goog.array.forEach(molecule.bonds, function(bond) {
+    this.bondRendererFactory.get(bond).highlightOn(bond, opt_color, opt_group)
+  }, this);
+  goog.array.forEach(molecule.atoms, function(atom) {
+    this.atomRenderer.highlightOn(atom, opt_color, opt_group)
+  }, this);
+  return opt_group
+};
+kemia.view.MoleculeRenderer.defaultConfig = {bond:{stroke:{width:2, color:"black"}, fill:{color:"black"}}, highlight:{radius:0.3, color:"blue"}};
+// Input 49
 goog.provide("goog.graphics.Path");
 goog.provide("goog.graphics.Path.Segment");
 goog.require("goog.array");
@@ -4873,197 +5446,7 @@ goog.graphics.Path.prototype.transform = function(tx) {
 goog.graphics.Path.prototype.isEmpty = function() {
   return this.segments_.length == 0
 };
-// Input 44
-goog.provide("goog.math.Box");
-goog.require("goog.math.Coordinate");
-goog.math.Box = function(top, right, bottom, left) {
-  this.top = top;
-  this.right = right;
-  this.bottom = bottom;
-  this.left = left
-};
-goog.math.Box.boundingBox = function(var_args) {
-  var box = new goog.math.Box(arguments[0].y, arguments[0].x, arguments[0].y, arguments[0].x);
-  for(var i = 1;i < arguments.length;i++) {
-    var coord = arguments[i];
-    box.top = Math.min(box.top, coord.y);
-    box.right = Math.max(box.right, coord.x);
-    box.bottom = Math.max(box.bottom, coord.y);
-    box.left = Math.min(box.left, coord.x)
-  }return box
-};
-goog.math.Box.prototype.clone = function() {
-  return new goog.math.Box(this.top, this.right, this.bottom, this.left)
-};
-if(goog.DEBUG) {
-  goog.math.Box.prototype.toString = function() {
-    return"(" + this.top + "t, " + this.right + "r, " + this.bottom + "b, " + this.left + "l)"
-  }
-}goog.math.Box.prototype.contains = function(other) {
-  return goog.math.Box.contains(this, other)
-};
-goog.math.Box.prototype.expand = function(top, opt_right, opt_bottom, opt_left) {
-  if(goog.isObject(top)) {
-    this.top -= top.top;
-    this.right += top.right;
-    this.bottom += top.bottom;
-    this.left -= top.left
-  }else {
-    this.top -= top;
-    this.right += opt_right;
-    this.bottom += opt_bottom;
-    this.left -= opt_left
-  }return this
-};
-goog.math.Box.prototype.expandToInclude = function(box) {
-  this.left = Math.min(this.left, box.left);
-  this.top = Math.min(this.top, box.top);
-  this.right = Math.max(this.right, box.right);
-  this.bottom = Math.max(this.bottom, box.bottom)
-};
-goog.math.Box.equals = function(a, b) {
-  if(a == b) {
-    return true
-  }if(!a || !b) {
-    return false
-  }return a.top == b.top && a.right == b.right && a.bottom == b.bottom && a.left == b.left
-};
-goog.math.Box.contains = function(box, other) {
-  if(!box || !other) {
-    return false
-  }if(other instanceof goog.math.Box) {
-    return other.left >= box.left && other.right <= box.right && other.top >= box.top && other.bottom <= box.bottom
-  }return other.x >= box.left && other.x <= box.right && other.y >= box.top && other.y <= box.bottom
-};
-goog.math.Box.distance = function(box, coord) {
-  if(coord.x >= box.left && coord.x <= box.right) {
-    if(coord.y >= box.top && coord.y <= box.bottom) {
-      return 0
-    }return coord.y < box.top ? box.top - coord.y : coord.y - box.bottom
-  }if(coord.y >= box.top && coord.y <= box.bottom) {
-    return coord.x < box.left ? box.left - coord.x : coord.x - box.right
-  }return goog.math.Coordinate.distance(coord, new goog.math.Coordinate(coord.x < box.left ? box.left : box.right, coord.y < box.top ? box.top : box.bottom))
-};
-goog.math.Box.intersects = function(a, b) {
-  return a.left <= b.right && b.left <= a.right && a.top <= b.bottom && b.top <= a.bottom
-};
-// Input 45
-goog.provide("goog.math.Rect");
-goog.require("goog.math.Box");
-goog.require("goog.math.Size");
-goog.math.Rect = function(x, y, w, h) {
-  this.left = x;
-  this.top = y;
-  this.width = w;
-  this.height = h
-};
-goog.math.Rect.prototype.clone = function() {
-  return new goog.math.Rect(this.left, this.top, this.width, this.height)
-};
-goog.math.Rect.prototype.toBox = function() {
-  var right = this.left + this.width;
-  var bottom = this.top + this.height;
-  return new goog.math.Box(this.top, right, bottom, this.left)
-};
-goog.math.Rect.createFromBox = function(box) {
-  return new goog.math.Rect(box.left, box.top, box.right - box.left, box.bottom - box.top)
-};
-if(goog.DEBUG) {
-  goog.math.Rect.prototype.toString = function() {
-    return"(" + this.left + ", " + this.top + " - " + this.width + "w x " + this.height + "h)"
-  }
-}goog.math.Rect.equals = function(a, b) {
-  if(a == b) {
-    return true
-  }if(!a || !b) {
-    return false
-  }return a.left == b.left && a.width == b.width && a.top == b.top && a.height == b.height
-};
-goog.math.Rect.prototype.intersection = function(rect) {
-  var x0 = Math.max(this.left, rect.left);
-  var x1 = Math.min(this.left + this.width, rect.left + rect.width);
-  if(x0 <= x1) {
-    var y0 = Math.max(this.top, rect.top);
-    var y1 = Math.min(this.top + this.height, rect.top + rect.height);
-    if(y0 <= y1) {
-      this.left = x0;
-      this.top = y0;
-      this.width = x1 - x0;
-      this.height = y1 - y0;
-      return true
-    }
-  }return false
-};
-goog.math.Rect.intersection = function(a, b) {
-  var x0 = Math.max(a.left, b.left);
-  var x1 = Math.min(a.left + a.width, b.left + b.width);
-  if(x0 <= x1) {
-    var y0 = Math.max(a.top, b.top);
-    var y1 = Math.min(a.top + a.height, b.top + b.height);
-    if(y0 <= y1) {
-      return new goog.math.Rect(x0, y0, x1 - x0, y1 - y0)
-    }
-  }return null
-};
-goog.math.Rect.intersects = function(a, b) {
-  return a.left <= b.left + b.width && b.left <= a.left + a.width && a.top <= b.top + b.height && b.top <= a.top + a.height
-};
-goog.math.Rect.prototype.intersects = function(rect) {
-  return goog.math.Rect.intersects(this, rect)
-};
-goog.math.Rect.difference = function(a, b) {
-  var intersection = goog.math.Rect.intersection(a, b);
-  if(!intersection || !intersection.height || !intersection.width) {
-    return[a.clone()]
-  }var result = [];
-  var top = a.top;
-  var height = a.height;
-  var ar = a.left + a.width;
-  var ab = a.top + a.height;
-  var br = b.left + b.width;
-  var bb = b.top + b.height;
-  if(b.top > a.top) {
-    result.push(new goog.math.Rect(a.left, a.top, a.width, b.top - a.top));
-    top = b.top;
-    height -= b.top - a.top
-  }if(bb < ab) {
-    result.push(new goog.math.Rect(a.left, bb, a.width, ab - bb));
-    height = bb - top
-  }if(b.left > a.left) {
-    result.push(new goog.math.Rect(a.left, top, b.left - a.left, height))
-  }if(br < ar) {
-    result.push(new goog.math.Rect(br, top, ar - br, height))
-  }return result
-};
-goog.math.Rect.prototype.difference = function(rect) {
-  return goog.math.Rect.difference(this, rect)
-};
-goog.math.Rect.prototype.boundingRect = function(rect) {
-  var right = Math.max(this.left + this.width, rect.left + rect.width);
-  var bottom = Math.max(this.top + this.height, rect.top + rect.height);
-  this.left = Math.min(this.left, rect.left);
-  this.top = Math.min(this.top, rect.top);
-  this.width = right - this.left;
-  this.height = bottom - this.top
-};
-goog.math.Rect.boundingRect = function(a, b) {
-  if(!a || !b) {
-    return null
-  }var clone = a.clone();
-  clone.boundingRect(b);
-  return clone
-};
-goog.math.Rect.prototype.contains = function(another) {
-  if(another instanceof goog.math.Rect) {
-    return this.left <= another.left && this.left + this.width >= another.left + another.width && this.top <= another.top && this.top + this.height >= another.top + another.height
-  }else {
-    return another.x >= this.left && another.x <= this.left + this.width && another.y >= this.top && another.y <= this.top + this.height
-  }
-};
-goog.math.Rect.prototype.getSize = function() {
-  return new goog.math.Size(this.width, this.height)
-};
-// Input 46
+// Input 50
 goog.provide("goog.style");
 goog.require("goog.array");
 goog.require("goog.dom");
@@ -5131,8 +5514,8 @@ goog.style.setPosition = function(el, arg1, opt_arg2) {
   }else {
     x = arg1;
     y = opt_arg2
-  }el.style.left = goog.style.getPixelStyleValue_(x, buggyGeckoSubPixelPos);
-  el.style.top = goog.style.getPixelStyleValue_(y, buggyGeckoSubPixelPos)
+  }el.style.left = typeof x == "number" ? (buggyGeckoSubPixelPos ? Math.round(x) : x) + "px" : x;
+  el.style.top = typeof y == "number" ? (buggyGeckoSubPixelPos ? Math.round(y) : y) + "px" : y
 };
 goog.style.getPosition = function(element) {
   return new goog.math.Coordinate(element.offsetLeft, element.offsetTop)
@@ -5344,19 +5727,8 @@ goog.style.setSize = function(element, w, opt_h) {
     if(opt_h == undefined) {
       throw Error("missing height argument");
     }h = opt_h
-  }goog.style.setWidth(element, w);
-  goog.style.setHeight(element, h)
-};
-goog.style.getPixelStyleValue_ = function(value, round) {
-  if(typeof value == "number") {
-    value = (round ? Math.round(value) : value) + "px"
-  }return value
-};
-goog.style.setHeight = function(element, height) {
-  element.style.height = goog.style.getPixelStyleValue_(height, true)
-};
-goog.style.setWidth = function(element, width) {
-  element.style.width = goog.style.getPixelStyleValue_(width, true)
+  }element.style.width = typeof w == "number" ? Math.round(w) + "px" : w;
+  element.style.height = typeof h == "number" ? Math.round(h) + "px" : h
 };
 goog.style.getSize = function(element) {
   var hasOperaBug = goog.userAgent.OPERA && !goog.userAgent.isVersion("10");
@@ -5695,14 +6067,10 @@ goog.style.getBorderBox = function(element) {
 goog.style.getFontFamily = function(el) {
   var doc = goog.dom.getOwnerDocument(el);
   var font = "";
-  if(doc.body.createTextRange) {
+  if(doc.createTextRange) {
     var range = doc.body.createTextRange();
     range.moveToElementText(el);
-    try {
-      font = range.queryCommandValue("FontName")
-    }catch(e) {
-      font = ""
-    }
+    font = range.queryCommandValue("FontName")
   }if(!font) {
     font = goog.style.getStyle_(el, "fontFamily");
     if(goog.userAgent.OPERA && goog.userAgent.LINUX) {
@@ -5772,39 +6140,12 @@ goog.style.getScrollbarWidth = function() {
   goog.dom.removeNode(mockElement);
   return width
 };
-// Input 47
-goog.provide("goog.debug.EntryPointMonitor");
-goog.provide("goog.debug.entryPointRegistry");
-goog.debug.EntryPointMonitor = function() {
-};
-goog.debug.EntryPointMonitor.prototype.wrap;
-goog.debug.EntryPointMonitor.prototype.unwrap;
-goog.debug.entryPointRegistry.refList_ = [];
-goog.debug.entryPointRegistry.register = function(callback) {
-  goog.debug.entryPointRegistry.refList_[goog.debug.entryPointRegistry.refList_.length] = callback
-};
-goog.debug.entryPointRegistry.monitorAll = function(monitor) {
-  var transformer = goog.bind(monitor.wrap, monitor);
-  for(var i = 0;i < goog.debug.entryPointRegistry.refList_.length;i++) {
-    goog.debug.entryPointRegistry.refList_[i](transformer)
-  }
-};
-goog.debug.entryPointRegistry.unmonitorAllIfPossible = function(monitor) {
-  var transformer = goog.bind(monitor.unwrap, monitor);
-  for(var i = 0;i < goog.debug.entryPointRegistry.refList_.length;i++) {
-    goog.debug.entryPointRegistry.refList_[i](transformer)
-  }
-};
-// Input 48
+// Input 51
 goog.provide("goog.debug.errorHandlerWeakDep");
 goog.debug.errorHandlerWeakDep = {protectEntryPoint:function(fn, opt_tracers) {
   return fn
 }};
-// Input 49
-goog.provide("goog.events.BrowserFeature");
-goog.require("goog.userAgent");
-goog.events.BrowserFeature = {HAS_W3C_BUTTON:!goog.userAgent.IE || goog.userAgent.isVersion("9"), SET_KEY_CODE_TO_PREVENT_DEFAULT:goog.userAgent.IE && !goog.userAgent.isVersion("8")};
-// Input 50
+// Input 52
 goog.provide("goog.Disposable");
 goog.provide("goog.dispose");
 goog.Disposable = function() {
@@ -5827,7 +6168,7 @@ goog.dispose = function(obj) {
     obj.dispose()
   }
 };
-// Input 51
+// Input 53
 goog.provide("goog.events.Event");
 goog.require("goog.Disposable");
 goog.events.Event = function(type, opt_target) {
@@ -5856,12 +6197,10 @@ goog.events.Event.stopPropagation = function(e) {
 goog.events.Event.preventDefault = function(e) {
   e.preventDefault()
 };
-// Input 52
+// Input 54
 goog.provide("goog.events.BrowserEvent");
 goog.provide("goog.events.BrowserEvent.MouseButton");
-goog.require("goog.events.BrowserFeature");
 goog.require("goog.events.Event");
-goog.require("goog.events.EventType");
 goog.require("goog.userAgent");
 goog.events.BrowserEvent = function(opt_e, opt_currentTarget) {
   if(opt_e) {
@@ -5903,10 +6242,10 @@ goog.events.BrowserEvent.prototype.init = function(e, opt_currentTarget) {
       }
     }
   }else {
-    if(type == goog.events.EventType.MOUSEOVER) {
+    if(type == "mouseover") {
       relatedTarget = e.fromElement
     }else {
-      if(type == goog.events.EventType.MOUSEOUT) {
+      if(type == "mouseout") {
         relatedTarget = e.toElement
       }
     }
@@ -5930,7 +6269,7 @@ goog.events.BrowserEvent.prototype.init = function(e, opt_currentTarget) {
   delete this.propagationStopped_
 };
 goog.events.BrowserEvent.prototype.isButton = function(button) {
-  if(!goog.events.BrowserFeature.HAS_W3C_BUTTON) {
+  if(goog.userAgent.IE) {
     if(this.type == "click") {
       return button == goog.events.BrowserEvent.MouseButton.LEFT
     }else {
@@ -5941,19 +6280,20 @@ goog.events.BrowserEvent.prototype.isButton = function(button) {
   }
 };
 goog.events.BrowserEvent.prototype.stopPropagation = function() {
-  goog.events.BrowserEvent.superClass_.stopPropagation.call(this);
+  this.propagationStopped_ = true;
   if(this.event_.stopPropagation) {
     this.event_.stopPropagation()
   }else {
     this.event_.cancelBubble = true
   }
 };
+goog.events.BrowserEvent.IE7_SET_KEY_CODE_TO_PREVENT_DEFAULT_ = goog.userAgent.IE && !goog.userAgent.isVersion("8");
 goog.events.BrowserEvent.prototype.preventDefault = function() {
-  goog.events.BrowserEvent.superClass_.preventDefault.call(this);
+  this.returnValue_ = false;
   var be = this.event_;
   if(!be.preventDefault) {
     be.returnValue = false;
-    if(goog.events.BrowserFeature.SET_KEY_CODE_TO_PREVENT_DEFAULT) {
+    if(goog.events.BrowserEvent.IE7_SET_KEY_CODE_TO_PREVENT_DEFAULT_) {
       try {
         var VK_F1 = 112;
         var VK_F12 = 123;
@@ -5977,7 +6317,7 @@ goog.events.BrowserEvent.prototype.disposeInternal = function() {
   this.currentTarget = null;
   this.relatedTarget = null
 };
-// Input 53
+// Input 55
 goog.provide("goog.events.EventWrapper");
 goog.events.EventWrapper = function() {
 };
@@ -5985,7 +6325,7 @@ goog.events.EventWrapper.prototype.listen = function(src, listener, opt_capt, op
 };
 goog.events.EventWrapper.prototype.unlisten = function(src, listener, opt_capt, opt_scope, opt_eventHandler) {
 };
-// Input 54
+// Input 56
 goog.provide("goog.events.Listener");
 goog.events.Listener = function() {
 };
@@ -6024,7 +6364,7 @@ goog.events.Listener.prototype.handleEvent = function(eventObject) {
     return this.listener.call(this.handler || this.src, eventObject)
   }return this.listener.handleEvent.call(this.listener, eventObject)
 };
-// Input 55
+// Input 57
 goog.provide("goog.structs.SimplePool");
 goog.require("goog.Disposable");
 goog.structs.SimplePool = function(initialCount, maxCount) {
@@ -6072,13 +6412,11 @@ goog.structs.SimplePool.prototype.disposeObject = function(obj) {
   if(this.disposeObjectFn_) {
     this.disposeObjectFn_(obj)
   }else {
-    if(goog.isObject(obj)) {
-      if(goog.isFunction(obj.dispose)) {
-        obj.dispose()
-      }else {
-        for(var i in obj) {
-          delete obj[i]
-        }
+    if(goog.isFunction(obj.dispose)) {
+      obj.dispose()
+    }else {
+      for(var i in obj) {
+        delete obj[i]
       }
     }
   }
@@ -6090,7 +6428,7 @@ goog.structs.SimplePool.prototype.disposeInternal = function() {
     this.disposeObject(freeQueue.pop())
   }delete this.freeQueue_
 };
-// Input 56
+// Input 58
 goog.provide("goog.userAgent.jscript");
 goog.require("goog.string");
 goog.userAgent.jscript.ASSUME_NO_JSCRIPT = false;
@@ -6106,7 +6444,7 @@ goog.userAgent.jscript.VERSION = goog.userAgent.jscript.ASSUME_NO_JSCRIPT ? "0" 
 goog.userAgent.jscript.isVersion = function(version) {
   return goog.string.compareVersions(goog.userAgent.jscript.VERSION, version) >= 0
 };
-// Input 57
+// Input 59
 goog.provide("goog.events.pools");
 goog.require("goog.events.BrowserEvent");
 goog.require("goog.events.Listener");
@@ -6211,10 +6549,10 @@ goog.events.pools.releaseEvent;
     eventPool.setCreateObjectFn(getEvent)
   }
 })();
-// Input 58
+// Input 60
 goog.provide("goog.events");
+goog.provide("goog.events.EventType");
 goog.require("goog.array");
-goog.require("goog.debug.entryPointRegistry");
 goog.require("goog.debug.errorHandlerWeakDep");
 goog.require("goog.events.BrowserEvent");
 goog.require("goog.events.Event");
@@ -6228,7 +6566,6 @@ goog.events.sources_ = {};
 goog.events.onString_ = "on";
 goog.events.onStringMap_ = {};
 goog.events.keySeparator_ = "_";
-goog.events.requiresSyntheticEventPropagation_;
 goog.events.listen = function(src, type, listener, opt_capt, opt_handler) {
   if(!type) {
     throw Error("Invalid event type");
@@ -6465,6 +6802,8 @@ goog.events.expose = function(e) {
     }
   }return str.join("\n")
 };
+goog.events.EventType = {CLICK:"click", DBLCLICK:"dblclick", MOUSEDOWN:"mousedown", MOUSEUP:"mouseup", MOUSEOVER:"mouseover", MOUSEOUT:"mouseout", MOUSEMOVE:"mousemove", SELECTSTART:"selectstart", KEYPRESS:"keypress", KEYDOWN:"keydown", KEYUP:"keyup", BLUR:"blur", FOCUS:"focus", DEACTIVATE:"deactivate", FOCUSIN:goog.userAgent.IE ? "focusin" : "DOMFocusIn", FOCUSOUT:goog.userAgent.IE ? "focusout" : "DOMFocusOut", CHANGE:"change", SELECT:"select", SUBMIT:"submit", CONTEXTMENU:"contextmenu", DRAGSTART:"dragstart", 
+ERROR:"error", HASHCHANGE:"hashchange", HELP:"help", LOAD:"load", LOSECAPTURE:"losecapture", READYSTATECHANGE:"readystatechange", RESIZE:"resize", SCROLL:"scroll", UNLOAD:"unload"};
 goog.events.getOnString_ = function(type) {
   if(type in goog.events.onStringMap_) {
     return goog.events.onStringMap_[type]
@@ -6558,8 +6897,8 @@ goog.events.dispatchEvent = function(src, e) {
     }
   }return Boolean(rv)
 };
-goog.events.protectBrowserEventEntryPoint = function(errorHandler) {
-  goog.events.handleBrowserEvent_ = errorHandler.protectEntryPoint(goog.events.handleBrowserEvent_);
+goog.events.protectBrowserEventEntryPoint = function(errorHandler, opt_tracers) {
+  goog.events.handleBrowserEvent_ = errorHandler.protectEntryPoint(goog.events.handleBrowserEvent_, opt_tracers);
   goog.events.pools.setProxyCallbackFunction(goog.events.handleBrowserEvent_)
 };
 goog.events.handleBrowserEvent_ = function(key, opt_evt) {
@@ -6572,7 +6911,7 @@ goog.events.handleBrowserEvent_ = function(key, opt_evt) {
     return true
   }map = map[type];
   var retval, targetsMap;
-  if(goog.events.synthesizeEventPropagation_()) {
+  if(goog.userAgent.IE) {
     var ieEvent = opt_evt || goog.getObjectByName("window.event");
     var hasCapture = true in map;
     var hasBubble = false in map;
@@ -6639,16 +6978,7 @@ goog.events.uniqueIdCounter_ = 0;
 goog.events.getUniqueId = function(identifier) {
   return identifier + "_" + goog.events.uniqueIdCounter_++
 };
-goog.events.synthesizeEventPropagation_ = function() {
-  if(goog.events.requiresSyntheticEventPropagation_ === undefined) {
-    goog.events.requiresSyntheticEventPropagation_ = goog.userAgent.IE && !goog.global["addEventListener"]
-  }return goog.events.requiresSyntheticEventPropagation_
-};
-goog.debug.entryPointRegistry.register(function(transformer) {
-  goog.events.handleBrowserEvent_ = transformer(goog.events.handleBrowserEvent_);
-  goog.events.pools.setProxyCallbackFunction(goog.events.handleBrowserEvent_)
-});
-// Input 59
+// Input 61
 goog.provide("goog.events.EventHandler");
 goog.require("goog.Disposable");
 goog.require("goog.events");
@@ -6748,7 +7078,7 @@ goog.events.EventHandler.prototype.disposeInternal = function() {
 goog.events.EventHandler.prototype.handleEvent = function(e) {
   throw Error("EventHandler.handleEvent not implemented");
 };
-// Input 60
+// Input 62
 goog.provide("goog.events.EventTarget");
 goog.require("goog.Disposable");
 goog.require("goog.events");
@@ -6778,7 +7108,7 @@ goog.events.EventTarget.prototype.disposeInternal = function() {
   goog.events.removeAll(this);
   this.parentEventTarget_ = null
 };
-// Input 61
+// Input 63
 goog.provide("goog.ui.IdGenerator");
 goog.ui.IdGenerator = function() {
 };
@@ -6788,7 +7118,7 @@ goog.ui.IdGenerator.prototype.getNextUniqueId = function() {
   return":" + (this.nextId_++).toString(36)
 };
 goog.ui.IdGenerator.instance = goog.ui.IdGenerator.getInstance();
-// Input 62
+// Input 64
 goog.provide("goog.ui.Component");
 goog.provide("goog.ui.Component.Error");
 goog.provide("goog.ui.Component.EventType");
@@ -6838,7 +7168,7 @@ goog.ui.Component.setDefaultRightToLeft = function(rightToLeft) {
   goog.ui.Component.defaultRightToLeft_ = rightToLeft
 };
 goog.ui.Component.prototype.id_ = null;
-goog.ui.Component.prototype.dom_;
+goog.ui.Component.prototype.dom_ = null;
 goog.ui.Component.prototype.inDocument_ = false;
 goog.ui.Component.prototype.element_ = null;
 goog.ui.Component.prototype.googUiComponentHandler_;
@@ -7087,7 +7417,7 @@ goog.ui.Component.prototype.removeChildren = function(opt_unrender) {
     this.removeChildAt(0, opt_unrender)
   }
 };
-// Input 63
+// Input 65
 goog.provide("goog.graphics.AbstractGraphics");
 goog.require("goog.graphics.Path");
 goog.require("goog.math.Coordinate");
@@ -7181,7 +7511,7 @@ goog.graphics.AbstractGraphics.prototype.suspend = function() {
 };
 goog.graphics.AbstractGraphics.prototype.resume = function() {
 };
-// Input 64
+// Input 66
 goog.provide("goog.graphics.AffineTransform");
 goog.require("goog.math");
 goog.graphics.AffineTransform = function(opt_m00, opt_m10, opt_m01, opt_m11, opt_m02, opt_m12) {
@@ -7350,7 +7680,7 @@ goog.graphics.AffineTransform.prototype.equals = function(tx) {
     return false
   }return this.m00_ == tx.m00_ && this.m01_ == tx.m01_ && this.m02_ == tx.m02_ && this.m10_ == tx.m10_ && this.m11_ == tx.m11_ && this.m12_ == tx.m12_
 };
-// Input 65
+// Input 67
 goog.provide("goog.graphics.Element");
 goog.require("goog.events");
 goog.require("goog.events.EventTarget");
@@ -7389,7 +7719,7 @@ goog.graphics.Element.prototype.disposeInternal = function() {
   goog.graphics.Element.superClass_.disposeInternal.call(this);
   goog.events.removeAll(this.element_)
 };
-// Input 66
+// Input 68
 goog.provide("goog.graphics.StrokeAndFillElement");
 goog.require("goog.graphics.Element");
 goog.graphics.StrokeAndFillElement = function(element, graphics, stroke, fill) {
@@ -7398,14 +7728,14 @@ goog.graphics.StrokeAndFillElement = function(element, graphics, stroke, fill) {
   this.setFill(fill)
 };
 goog.inherits(goog.graphics.StrokeAndFillElement, goog.graphics.Element);
-goog.graphics.StrokeAndFillElement.prototype.fill = null;
+goog.graphics.StrokeAndFillElement.prototype.fill_ = null;
 goog.graphics.StrokeAndFillElement.prototype.stroke_ = null;
 goog.graphics.StrokeAndFillElement.prototype.setFill = function(fill) {
-  this.fill = fill;
+  this.fill_ = fill;
   this.getGraphics().setElementFill(this, fill)
 };
 goog.graphics.StrokeAndFillElement.prototype.getFill = function() {
-  return this.fill
+  return this.fill_
 };
 goog.graphics.StrokeAndFillElement.prototype.setStroke = function(stroke) {
   this.stroke_ = stroke;
@@ -7419,7 +7749,7 @@ goog.graphics.StrokeAndFillElement.prototype.reapplyStroke = function() {
     this.setStroke(this.stroke_)
   }
 };
-// Input 67
+// Input 69
 goog.provide("goog.graphics.EllipseElement");
 goog.require("goog.graphics.StrokeAndFillElement");
 goog.graphics.EllipseElement = function(element, graphics, stroke, fill) {
@@ -7428,7 +7758,7 @@ goog.graphics.EllipseElement = function(element, graphics, stroke, fill) {
 goog.inherits(goog.graphics.EllipseElement, goog.graphics.StrokeAndFillElement);
 goog.graphics.EllipseElement.prototype.setCenter = goog.abstractMethod;
 goog.graphics.EllipseElement.prototype.setRadius = goog.abstractMethod;
-// Input 68
+// Input 70
 goog.provide("goog.graphics.GroupElement");
 goog.require("goog.graphics.Element");
 goog.graphics.GroupElement = function(element, graphics) {
@@ -7437,7 +7767,7 @@ goog.graphics.GroupElement = function(element, graphics) {
 goog.inherits(goog.graphics.GroupElement, goog.graphics.Element);
 goog.graphics.GroupElement.prototype.clear = goog.abstractMethod;
 goog.graphics.GroupElement.prototype.setSize = goog.abstractMethod;
-// Input 69
+// Input 71
 goog.provide("goog.graphics.ImageElement");
 goog.require("goog.graphics.Element");
 goog.graphics.ImageElement = function(element, graphics) {
@@ -7447,7 +7777,7 @@ goog.inherits(goog.graphics.ImageElement, goog.graphics.Element);
 goog.graphics.ImageElement.prototype.setPosition = goog.abstractMethod;
 goog.graphics.ImageElement.prototype.setSize = goog.abstractMethod;
 goog.graphics.ImageElement.prototype.setSource = goog.abstractMethod;
-// Input 70
+// Input 72
 goog.provide("goog.graphics.PathElement");
 goog.require("goog.graphics.StrokeAndFillElement");
 goog.graphics.PathElement = function(element, graphics, stroke, fill) {
@@ -7455,7 +7785,7 @@ goog.graphics.PathElement = function(element, graphics, stroke, fill) {
 };
 goog.inherits(goog.graphics.PathElement, goog.graphics.StrokeAndFillElement);
 goog.graphics.PathElement.prototype.setPath = goog.abstractMethod;
-// Input 71
+// Input 73
 goog.provide("goog.graphics.RectElement");
 goog.require("goog.graphics.StrokeAndFillElement");
 goog.graphics.RectElement = function(element, graphics, stroke, fill) {
@@ -7464,7 +7794,7 @@ goog.graphics.RectElement = function(element, graphics, stroke, fill) {
 goog.inherits(goog.graphics.RectElement, goog.graphics.StrokeAndFillElement);
 goog.graphics.RectElement.prototype.setPosition = goog.abstractMethod;
 goog.graphics.RectElement.prototype.setSize = goog.abstractMethod;
-// Input 72
+// Input 74
 goog.provide("goog.graphics.TextElement");
 goog.require("goog.graphics.StrokeAndFillElement");
 goog.graphics.TextElement = function(element, graphics, stroke, fill) {
@@ -7472,7 +7802,7 @@ goog.graphics.TextElement = function(element, graphics, stroke, fill) {
 };
 goog.inherits(goog.graphics.TextElement, goog.graphics.StrokeAndFillElement);
 goog.graphics.TextElement.prototype.setText = goog.abstractMethod;
-// Input 73
+// Input 75
 goog.provide("goog.graphics.CanvasEllipseElement");
 goog.provide("goog.graphics.CanvasGroupElement");
 goog.provide("goog.graphics.CanvasImageElement");
@@ -7522,8 +7852,7 @@ goog.graphics.CanvasEllipseElement = function(element, graphics, cx, cy, rx, ry,
 goog.inherits(goog.graphics.CanvasEllipseElement, goog.graphics.EllipseElement);
 goog.graphics.CanvasEllipseElement.prototype.setUpPath_ = function() {
   this.path_.clear();
-  this.path_.moveTo(this.cx_ + goog.math.angleDx(0, this.rx_), this.cy_ + goog.math.angleDy(0, this.ry_));
-  this.path_.arcTo(this.rx_, this.ry_, 0, 360);
+  this.path_.arc(this.cx_, this.cy_, this.rx_, this.ry_, 0, 360, false);
   this.path_.close()
 };
 goog.graphics.CanvasEllipseElement.prototype.setCenter = function(cx, cy) {
@@ -7632,7 +7961,7 @@ goog.graphics.CanvasTextElement.prototype.setText = function(text) {
   this.updateText_()
 };
 goog.graphics.CanvasTextElement.prototype.setFill = function(fill) {
-  this.fill = fill;
+  this.fill_ = fill;
   if(this.element_) {
     this.element_.style.color = fill.getColor() || fill.getColor1()
   }
@@ -7728,7 +8057,7 @@ goog.graphics.CanvasImageElement.prototype.handleImageLoad_ = function(img) {
   this.img_ = img;
   this.getGraphics().redraw()
 };
-// Input 74
+// Input 76
 goog.provide("goog.graphics.Font");
 goog.graphics.Font = function(size, family) {
   this.size = size;
@@ -7736,11 +8065,11 @@ goog.graphics.Font = function(size, family) {
 };
 goog.graphics.Font.prototype.bold = false;
 goog.graphics.Font.prototype.italic = false;
-// Input 75
+// Input 77
 goog.provide("goog.graphics.Fill");
 goog.graphics.Fill = function() {
 };
-// Input 76
+// Input 78
 goog.provide("goog.graphics.LinearGradient");
 goog.require("goog.graphics.Fill");
 goog.graphics.LinearGradient = function(x1, y1, x2, y2, color1, color2) {
@@ -7770,7 +8099,7 @@ goog.graphics.LinearGradient.prototype.getColor1 = function() {
 goog.graphics.LinearGradient.prototype.getColor2 = function() {
   return this.color2_
 };
-// Input 77
+// Input 79
 goog.provide("goog.graphics.SolidFill");
 goog.require("goog.graphics.Fill");
 goog.graphics.SolidFill = function(color, opt_opacity) {
@@ -7784,7 +8113,7 @@ goog.graphics.SolidFill.prototype.getColor = function() {
 goog.graphics.SolidFill.prototype.getOpacity = function() {
   return this.opacity_
 };
-// Input 78
+// Input 80
 goog.provide("goog.graphics.Stroke");
 goog.graphics.Stroke = function(width, color) {
   this.width_ = width;
@@ -7796,10 +8125,9 @@ goog.graphics.Stroke.prototype.getWidth = function() {
 goog.graphics.Stroke.prototype.getColor = function() {
   return this.color_
 };
-// Input 79
+// Input 81
 goog.provide("goog.graphics.CanvasGraphics");
 goog.require("goog.dom");
-goog.require("goog.events.EventType");
 goog.require("goog.graphics.AbstractGraphics");
 goog.require("goog.graphics.CanvasEllipseElement");
 goog.require("goog.graphics.CanvasGroupElement");
@@ -8045,7 +8373,7 @@ goog.graphics.CanvasGraphics.prototype.resume = function() {
     this.needsRedraw_ = false
   }
 };
-// Input 80
+// Input 82
 goog.provide("goog.Timer");
 goog.require("goog.events.EventTarget");
 goog.Timer = function(opt_interval, opt_timerObject) {
@@ -8111,7 +8439,7 @@ goog.Timer.prototype.disposeInternal = function() {
   delete this.timerObject_
 };
 goog.Timer.TICK = "tick";
-goog.Timer.callOnce = function(listener, opt_delay, opt_handler) {
+goog.Timer.callOnce = function(listener, opt_interval, opt_handler) {
   if(goog.isFunction(listener)) {
     if(opt_handler) {
       listener = goog.bind(listener, opt_handler)
@@ -8122,16 +8450,16 @@ goog.Timer.callOnce = function(listener, opt_delay, opt_handler) {
     }else {
       throw Error("Invalid listener argument");
     }
-  }if(opt_delay > goog.Timer.MAX_TIMEOUT_) {
+  }if(opt_interval > goog.Timer.MAX_TIMEOUT_) {
     return-1
   }else {
-    return goog.Timer.defaultTimerObject.setTimeout(listener, opt_delay || 0)
+    return goog.Timer.defaultTimerObject.setTimeout(listener, opt_interval || 0)
   }
 };
 goog.Timer.clear = function(timerId) {
   goog.Timer.defaultTimerObject.clearTimeout(timerId)
 };
-// Input 81
+// Input 83
 goog.provide("goog.graphics.SvgEllipseElement");
 goog.provide("goog.graphics.SvgGroupElement");
 goog.provide("goog.graphics.SvgImageElement");
@@ -8202,12 +8530,11 @@ goog.graphics.SvgImageElement.prototype.setSize = function(width, height) {
 goog.graphics.SvgImageElement.prototype.setSource = function(src) {
   this.getGraphics().setElementAttributes(this.getElement(), {"xlink:href":src})
 };
-// Input 82
+// Input 84
 goog.provide("goog.graphics.SvgGraphics");
 goog.require("goog.Timer");
 goog.require("goog.dom");
 goog.require("goog.events.EventHandler");
-goog.require("goog.events.EventType");
 goog.require("goog.graphics.AbstractGraphics");
 goog.require("goog.graphics.Font");
 goog.require("goog.graphics.LinearGradient");
@@ -8337,7 +8664,7 @@ goog.graphics.SvgGraphics.prototype.setSize = function(pixelWidth, pixelHeight) 
 };
 goog.graphics.SvgGraphics.prototype.getPixelSize = function() {
   if(!goog.userAgent.GECKO) {
-    return this.isInDocument() ? goog.style.getSize(this.getElement()) : goog.base(this, "getPixelSize")
+    return goog.style.getSize(this.getElement())
   }var width = this.width;
   var height = this.height;
   var computeWidth = goog.isString(width) && width.indexOf("%") != -1;
@@ -8507,7 +8834,7 @@ goog.graphics.SvgGraphics.getResizeCheckTimer_ = function() {
 goog.graphics.SvgGraphics.prototype.isDomClonable = function() {
   return true
 };
-// Input 83
+// Input 85
 goog.provide("goog.graphics.VmlEllipseElement");
 goog.provide("goog.graphics.VmlGroupElement");
 goog.provide("goog.graphics.VmlImageElement");
@@ -8620,12 +8947,11 @@ goog.graphics.VmlImageElement.prototype.setSize = function(width, height) {
 goog.graphics.VmlImageElement.prototype.setSource = function(src) {
   goog.graphics.VmlGraphics.setAttribute(this.getElement(), "src", src)
 };
-// Input 84
+// Input 86
 goog.provide("goog.graphics.VmlGraphics");
 goog.require("goog.array");
 goog.require("goog.dom");
 goog.require("goog.events.EventHandler");
-goog.require("goog.events.EventType");
 goog.require("goog.graphics.AbstractGraphics");
 goog.require("goog.graphics.Font");
 goog.require("goog.graphics.LinearGradient");
@@ -8964,7 +9290,7 @@ goog.graphics.VmlGraphics.prototype.disposeInternal = function() {
   this.canvasElement = null;
   goog.graphics.VmlGraphics.superClass_.disposeInternal.call(this)
 };
-// Input 85
+// Input 87
 goog.provide("goog.graphics");
 goog.require("goog.graphics.CanvasGraphics");
 goog.require("goog.graphics.SvgGraphics");
@@ -9001,7 +9327,7 @@ goog.graphics.isBrowserSupported = function() {
     return goog.userAgent.isVersion("412")
   }return false
 };
-// Input 86
+// Input 88
 goog.provide("kemia.view.ArrowRenderer");
 goog.require("kemia.view.Renderer");
 goog.require("goog.graphics");
@@ -9087,7 +9413,7 @@ kemia.view.ArrowRenderer.prototype.highlightOn = function(arrow, opt_color, opt_
 };
 kemia.view.ArrowRenderer.prototype.logger = goog.debug.Logger.getLogger("kemia.view.ArrowRenderer");
 kemia.view.ArrowRenderer.defaultConfig = {arrow:{height:0.5, stroke:{width:2, color:"black"}, fill:{color:"black"}, font:{name:"Arial", stroke:{width:0.1, color:"grey"}}, highlight:{radius:0.75, color:"grey"}}};
-// Input 87
+// Input 89
 goog.provide("kemia.view.PlusRenderer");
 goog.require("kemia.view.Renderer");
 kemia.view.PlusRenderer = function(graphics, opt_config) {
@@ -9125,7 +9451,7 @@ kemia.view.PlusRenderer.prototype.highlightOn = function(plus, opt_color, opt_gr
   return opt_group
 };
 kemia.view.PlusRenderer.defaultConfig = {plus:{highlight:{color:"blue", radius:0.4}, size:0.25, stroke:{width:2, color:"black"}}};
-// Input 88
+// Input 90
 goog.provide("kemia.graphics.AffineTransform");
 goog.require("goog.graphics.AffineTransform");
 kemia.graphics.AffineTransform = function(opt_m00, opt_m10, opt_m01, opt_m11, opt_m02, opt_m12) {
@@ -9160,7 +9486,7 @@ kemia.graphics.AffineTransform.getRotateInstance = function(theta, x, y) {
 kemia.graphics.AffineTransform.getScaleInstance = function(sx, sy) {
   return(new kemia.graphics.AffineTransform).setToScale(sx, sy)
 };
-// Input 89
+// Input 91
 goog.provide("kemia.view.ReactionRenderer");
 goog.require("kemia.view.Renderer");
 goog.require("kemia.view.MoleculeRenderer");
@@ -9212,7 +9538,7 @@ kemia.view.ReactionRenderer.prototype.setScaleFactor = function(scale) {
   this.moleculeRenderer.setScaleFactor(scale)
 };
 kemia.view.ReactionRenderer.defaultConfig = {margin:4};
-// Input 90
+// Input 92
 goog.provide("goog.fx.DragEvent");
 goog.provide("goog.fx.Dragger");
 goog.provide("goog.fx.Dragger.EventType");
@@ -9425,10 +9751,10 @@ goog.fx.DragEvent = function(type, dragobj, clientX, clientY, browserEvent, opt_
   this.dragCanceled = !!opt_dragCanceled
 };
 goog.inherits(goog.fx.DragEvent, goog.events.Event);
-// Input 91
+// Input 93
 goog.provide("goog.editor.defines");
 goog.editor.defines.USE_CONTENTEDITABLE_IN_FIREFOX_3 = false;
-// Input 92
+// Input 94
 goog.provide("goog.userAgent.product");
 goog.require("goog.userAgent");
 goog.userAgent.product.ASSUME_FIREFOX = false;
@@ -9489,7 +9815,7 @@ goog.userAgent.product.IPAD = goog.userAgent.product.PRODUCT_KNOWN_ ? goog.userA
 goog.userAgent.product.ANDROID = goog.userAgent.product.PRODUCT_KNOWN_ ? goog.userAgent.product.ASSUME_ANDROID : goog.userAgent.product.detectedAndroid_;
 goog.userAgent.product.CHROME = goog.userAgent.product.PRODUCT_KNOWN_ ? goog.userAgent.product.ASSUME_CHROME : goog.userAgent.product.detectedChrome_;
 goog.userAgent.product.SAFARI = goog.userAgent.product.PRODUCT_KNOWN_ ? goog.userAgent.product.ASSUME_SAFARI : goog.userAgent.product.detectedSafari_;
-// Input 93
+// Input 95
 goog.provide("goog.userAgent.product.isVersion");
 goog.require("goog.userAgent.product");
 goog.userAgent.product.determineVersion_ = function() {
@@ -9534,7 +9860,7 @@ goog.userAgent.product.VERSION = goog.userAgent.product.determineVersion_();
 goog.userAgent.product.isVersion = function(version) {
   return goog.string.compareVersions(goog.userAgent.product.VERSION, version) >= 0
 };
-// Input 94
+// Input 96
 goog.provide("goog.editor.BrowserFeature");
 goog.require("goog.editor.defines");
 goog.require("goog.userAgent");
@@ -9546,8 +9872,8 @@ goog.userAgent.OPERA, WRAPS_BLOCKQUOTE_IN_DIVS:goog.userAgent.OPERA, PREFERS_REA
 goog.userAgent.OPERA, TABS_THROUGH_IMAGES:goog.userAgent.IE, UNESCAPES_URLS_WITHOUT_ASKING:goog.userAgent.IE && !goog.userAgent.isVersion("7.0"), HAS_STYLE_WITH_CSS:goog.userAgent.GECKO && goog.userAgent.isVersion("1.8") || goog.userAgent.WEBKIT || goog.userAgent.OPERA, FOLLOWS_EDITABLE_LINKS:goog.userAgent.WEBKIT, HAS_ACTIVE_ELEMENT:goog.userAgent.IE || goog.userAgent.OPERA || goog.userAgent.GECKO && goog.userAgent.isVersion("1.9"), HAS_SET_CAPTURE:goog.userAgent.IE, EATS_EMPTY_BACKGROUND_COLOR:goog.userAgent.GECKO || 
 goog.userAgent.WEBKIT, SUPPORTS_FOCUSIN:goog.userAgent.IE || goog.userAgent.OPERA, SELECTS_IMAGES_ON_CLICK:goog.userAgent.IE || goog.userAgent.OPERA, MOVES_STYLE_TO_HEAD:goog.userAgent.WEBKIT, COLLAPSES_SELECTION_ONMOUSEDOWN:goog.userAgent.OPERA, CARET_INSIDE_SELECTION:goog.userAgent.OPERA, FOCUSES_EDITABLE_BODY_ON_HTML_CLICK:goog.userAgent.IE || goog.userAgent.GECKO || goog.userAgent.WEBKIT, USES_KEYDOWN:goog.userAgent.IE || goog.userAgent.WEBKIT && goog.userAgent.isVersion("525"), ADDS_NBSPS_IN_REMOVE_FORMAT:goog.userAgent.WEBKIT && 
 !goog.userAgent.isVersion("531"), GETS_STUCK_IN_LINKS:goog.userAgent.WEBKIT && !goog.userAgent.isVersion("528"), NORMALIZE_CORRUPTS_EMPTY_TEXT_NODES:goog.userAgent.GECKO && goog.userAgent.isVersion("1.9") || goog.userAgent.IE || goog.userAgent.OPERA || goog.userAgent.WEBKIT && goog.userAgent.isVersion("531"), NORMALIZE_CORRUPTS_ALL_TEXT_NODES:goog.userAgent.IE, NESTS_SUBSCRIPT_SUPERSCRIPT:goog.userAgent.IE || goog.userAgent.GECKO || goog.userAgent.OPERA, CAN_SELECT_EMPTY_ELEMENT:!goog.userAgent.IE && 
-!goog.userAgent.WEBKIT, FORGETS_FORMATTING_WHEN_LISTIFYING:goog.userAgent.GECKO || goog.userAgent.WEBKIT && !goog.userAgent.isVersion("526"), LEAVES_P_WHEN_REMOVING_LISTS:goog.userAgent.IE || goog.userAgent.OPERA, CAN_LISTIFY_BR:!goog.userAgent.IE && !goog.userAgent.OPERA, DOESNT_OVERRIDE_FONT_SIZE_IN_STYLE_ATTR:!goog.userAgent.WEBKIT, SUPPORTS_HTML5_FILE_DRAGGING:goog.userAgent.product.CHROME && goog.userAgent.product.isVersion("4") || goog.userAgent.product.SAFARI && goog.userAgent.product.isVersion("533")};
-// Input 95
+!goog.userAgent.WEBKIT, FORGETS_FORMATTING_WHEN_LISTIFYING:goog.userAgent.GECKO || goog.userAgent.WEBKIT && !goog.userAgent.isVersion("526"), LEAVES_P_WHEN_REMOVING_LISTS:goog.userAgent.IE || goog.userAgent.OPERA, CAN_LISTIFY_BR:!goog.userAgent.IE && !goog.userAgent.OPERA, DOESNT_OVERRIDE_FONT_SIZE_IN_STYLE_ATTR:!goog.userAgent.WEBKIT, SUPPORTS_HTML5_FILE_DRAGGING:goog.userAgent.product.CHROME && goog.userAgent.product.isVersion("4")};
+// Input 97
 goog.provide("goog.Delay");
 goog.provide("goog.async.Delay");
 goog.require("goog.Disposable");
@@ -9594,7 +9920,7 @@ goog.async.Delay.prototype.doAction_ = function() {
     this.listener_.call(this.handler_)
   }
 };
-// Input 96
+// Input 98
 goog.provide("goog.functions");
 goog.functions.constant = function(retValue) {
   return function() {
@@ -9603,7 +9929,6 @@ goog.functions.constant = function(retValue) {
 };
 goog.functions.FALSE = goog.functions.constant(false);
 goog.functions.TRUE = goog.functions.constant(true);
-goog.functions.NULL = goog.functions.constant(null);
 goog.functions.identity = function(opt_returnValue, var_args) {
   return opt_returnValue
 };
@@ -9669,7 +9994,7 @@ goog.functions.create = function(constructor, var_args) {
   constructor.apply(obj, Array.prototype.slice.call(arguments, 1));
   return obj
 };
-// Input 97
+// Input 99
 goog.provide("kemia.controller.Plugin");
 goog.require("goog.events.EventTarget");
 goog.require("goog.functions");
@@ -9750,7 +10075,7 @@ kemia.controller.Plugin.prototype.isSilentCommand = goog.functions.FALSE;
 kemia.controller.Plugin.prototype.isSupportedCommand = function(command) {
   return false
 };
-// Input 98
+// Input 100
 goog.provide("goog.math.Line");
 goog.require("goog.math");
 goog.require("goog.math.Coordinate");
@@ -9796,7 +10121,7 @@ goog.math.Line.prototype.getClosestPoint = function(x, opt_y) {
 goog.math.Line.prototype.getClosestSegmentPoint = function(x, opt_y) {
   return this.getInterpolatedPoint(goog.math.clamp(this.getClosestLinearInterpolation_(x, opt_y), 0, 1))
 };
-// Input 99
+// Input 101
 goog.provide("kemia.model.NeighborList");
 goog.require("goog.math.Vec2");
 goog.require("goog.array");
@@ -9931,7 +10256,7 @@ kemia.model.NeighborList.moleculesToNeighbors = function(molecules) {
   });
   return neighbors
 };
-// Input 100
+// Input 102
 goog.provide("goog.dom.a11y");
 goog.provide("goog.dom.a11y.Role");
 goog.provide("goog.dom.a11y.State");
@@ -9970,7 +10295,7 @@ goog.dom.a11y.getActiveDescendant = function(element) {
 goog.dom.a11y.setActiveDescendant = function(element, activeElement) {
   goog.dom.a11y.setState(element, goog.dom.a11y.State.ACTIVEDESCENDANT, activeElement ? activeElement.id : "")
 };
-// Input 101
+// Input 103
 goog.provide("goog.dom.iframe");
 goog.require("goog.dom");
 goog.dom.iframe.BLANK_SOURCE = 'javascript:""';
@@ -9995,7 +10320,7 @@ goog.dom.iframe.createWithContent = function(parentElement, opt_headContents, op
   goog.dom.iframe.writeContent(iframe, contentBuf.join(""));
   return iframe
 };
-// Input 102
+// Input 104
 goog.provide("goog.events.FocusHandler");
 goog.provide("goog.events.FocusHandler.EventType");
 goog.require("goog.events");
@@ -10028,61 +10353,51 @@ goog.events.FocusHandler.prototype.disposeInternal = function() {
   goog.events.unlistenByKey(this.listenKeyOut_);
   delete this.element_
 };
-// Input 103
+// Input 105
 goog.provide("goog.events.KeyCodes");
 goog.require("goog.userAgent");
 goog.events.KeyCodes = {MAC_ENTER:3, BACKSPACE:8, TAB:9, NUM_CENTER:12, ENTER:13, SHIFT:16, CTRL:17, ALT:18, PAUSE:19, CAPS_LOCK:20, ESC:27, SPACE:32, PAGE_UP:33, PAGE_DOWN:34, END:35, HOME:36, LEFT:37, UP:38, RIGHT:39, DOWN:40, PRINT_SCREEN:44, INSERT:45, DELETE:46, ZERO:48, ONE:49, TWO:50, THREE:51, FOUR:52, FIVE:53, SIX:54, SEVEN:55, EIGHT:56, NINE:57, QUESTION_MARK:63, A:65, B:66, C:67, D:68, E:69, F:70, G:71, H:72, I:73, J:74, K:75, L:76, M:77, N:78, O:79, P:80, Q:81, R:82, S:83, T:84, U:85, 
 V:86, W:87, X:88, Y:89, Z:90, META:91, CONTEXT_MENU:93, NUM_ZERO:96, NUM_ONE:97, NUM_TWO:98, NUM_THREE:99, NUM_FOUR:100, NUM_FIVE:101, NUM_SIX:102, NUM_SEVEN:103, NUM_EIGHT:104, NUM_NINE:105, NUM_MULTIPLY:106, NUM_PLUS:107, NUM_MINUS:109, NUM_PERIOD:110, NUM_DIVISION:111, F1:112, F2:113, F3:114, F4:115, F5:116, F6:117, F7:118, F8:119, F9:120, F10:121, F11:122, F12:123, NUMLOCK:144, SEMICOLON:186, DASH:189, EQUALS:187, COMMA:188, PERIOD:190, SLASH:191, APOSTROPHE:192, SINGLE_QUOTE:222, OPEN_SQUARE_BRACKET:219, 
-BACKSLASH:220, CLOSE_SQUARE_BRACKET:221, WIN_KEY:224, MAC_FF_META:224, WIN_IME:229, PHANTOM:255};
+BACKSLASH:220, CLOSE_SQUARE_BRACKET:221, WIN_KEY:224, MAC_FF_META:224, WIN_IME:229};
 goog.events.KeyCodes.isTextModifyingKeyEvent = function(e) {
   if(e.altKey && !e.ctrlKey || e.metaKey || e.keyCode >= goog.events.KeyCodes.F1 && e.keyCode <= goog.events.KeyCodes.F12) {
     return false
   }switch(e.keyCode) {
     case goog.events.KeyCodes.ALT:
     ;
-    case goog.events.KeyCodes.CAPS_LOCK:
-    ;
-    case goog.events.KeyCodes.CONTEXT_MENU:
+    case goog.events.KeyCodes.SHIFT:
     ;
     case goog.events.KeyCodes.CTRL:
     ;
-    case goog.events.KeyCodes.DOWN:
+    case goog.events.KeyCodes.PAUSE:
     ;
-    case goog.events.KeyCodes.END:
+    case goog.events.KeyCodes.CAPS_LOCK:
     ;
     case goog.events.KeyCodes.ESC:
     ;
-    case goog.events.KeyCodes.HOME:
-    ;
-    case goog.events.KeyCodes.INSERT:
-    ;
-    case goog.events.KeyCodes.LEFT:
-    ;
-    case goog.events.KeyCodes.MAC_FF_META:
-    ;
-    case goog.events.KeyCodes.META:
-    ;
-    case goog.events.KeyCodes.NUMLOCK:
-    ;
-    case goog.events.KeyCodes.NUM_CENTER:
+    case goog.events.KeyCodes.PAGE_UP:
     ;
     case goog.events.KeyCodes.PAGE_DOWN:
     ;
-    case goog.events.KeyCodes.PAGE_UP:
+    case goog.events.KeyCodes.HOME:
     ;
-    case goog.events.KeyCodes.PAUSE:
+    case goog.events.KeyCodes.END:
     ;
-    case goog.events.KeyCodes.PHANTOM:
-    ;
-    case goog.events.KeyCodes.PRINT_SCREEN:
+    case goog.events.KeyCodes.LEFT:
     ;
     case goog.events.KeyCodes.RIGHT:
     ;
-    case goog.events.KeyCodes.SHIFT:
-    ;
     case goog.events.KeyCodes.UP:
     ;
-    case goog.events.KeyCodes.WIN_KEY:
+    case goog.events.KeyCodes.DOWN:
+    ;
+    case goog.events.KeyCodes.INSERT:
+    ;
+    case goog.events.KeyCodes.NUMLOCK:
+    ;
+    case goog.events.KeyCodes.CONTEXT_MENU:
+    ;
+    case goog.events.KeyCodes.PRINT_SCREEN:
       return false;
     default:
       return true
@@ -10095,7 +10410,7 @@ goog.events.KeyCodes.firesKeyPressEvent = function(keyCode, opt_heldKeyCode, opt
     return goog.events.KeyCodes.isCharacterKey(keyCode)
   }if(opt_altKey && !opt_ctrlKey) {
     return false
-  }if(!opt_shiftKey && (opt_heldKeyCode == goog.events.KeyCodes.CTRL || opt_heldKeyCode == goog.events.KeyCodes.ALT)) {
+  }if(goog.userAgent.IE && !opt_shiftKey && (opt_heldKeyCode == goog.events.KeyCodes.CTRL || opt_heldKeyCode == goog.events.KeyCodes.ALT)) {
     return false
   }if(goog.userAgent.IE && opt_ctrlKey && opt_heldKeyCode == keyCode) {
     return false
@@ -10113,8 +10428,6 @@ goog.events.KeyCodes.isCharacterKey = function(keyCode) {
   }if(keyCode >= goog.events.KeyCodes.NUM_ZERO && keyCode <= goog.events.KeyCodes.NUM_MULTIPLY) {
     return true
   }if(keyCode >= goog.events.KeyCodes.A && keyCode <= goog.events.KeyCodes.Z) {
-    return true
-  }if(goog.userAgent.WEBKIT && keyCode == 0) {
     return true
   }switch(keyCode) {
     case goog.events.KeyCodes.SPACE:
@@ -10155,7 +10468,7 @@ goog.events.KeyCodes.isCharacterKey = function(keyCode) {
       return false
   }
 };
-// Input 104
+// Input 106
 goog.provide("goog.ui.Dialog");
 goog.provide("goog.ui.Dialog.ButtonSet");
 goog.provide("goog.ui.Dialog.DefaultButtonKeys");
@@ -10169,7 +10482,6 @@ goog.require("goog.dom.a11y");
 goog.require("goog.dom.classes");
 goog.require("goog.dom.iframe");
 goog.require("goog.events");
-goog.require("goog.events.EventType");
 goog.require("goog.events.FocusHandler");
 goog.require("goog.events.KeyCodes");
 goog.require("goog.fx.Dragger");
@@ -10502,7 +10814,7 @@ goog.ui.Dialog.prototype.resizeBackground_ = function() {
   }var doc = this.getDomHelper().getDocument();
   var win = goog.dom.getWindow(doc) || window;
   var viewSize = goog.dom.getViewportSize(win);
-  var w = Math.max(doc.body.scrollWidth, viewSize.width);
+  var w = doc.body.scrollWidth;
   var h = Math.max(doc.body.scrollHeight, viewSize.height);
   if(this.bgIframeEl_) {
     goog.style.showElement(this.bgIframeEl_, true);
@@ -10767,7 +11079,7 @@ goog.ui.Dialog.DefaultButtonKeys = {OK:"ok", CANCEL:"cancel", YES:"yes", NO:"no"
   goog.ui.Dialog.ButtonSet.YES_NO_CANCEL = (new goog.ui.Dialog.ButtonSet).set(goog.ui.Dialog.DefaultButtonKeys.YES, MSG_DIALOG_YES).set(goog.ui.Dialog.DefaultButtonKeys.NO, MSG_DIALOG_NO, true).set(goog.ui.Dialog.DefaultButtonKeys.CANCEL, MSG_DIALOG_CANCEL, false, true);
   goog.ui.Dialog.ButtonSet.CONTINUE_SAVE_CANCEL = (new goog.ui.Dialog.ButtonSet).set(goog.ui.Dialog.DefaultButtonKeys.CONTINUE, MSG_DIALOG_CONTINUE).set(goog.ui.Dialog.DefaultButtonKeys.SAVE, MSG_DIALOG_SAVE).set(goog.ui.Dialog.DefaultButtonKeys.CANCEL, MSG_DIALOG_CANCEL, true, true)
 })();
-// Input 105
+// Input 107
 goog.provide("goog.ui.Prompt");
 goog.require("goog.Timer");
 goog.require("goog.dom");
@@ -10831,7 +11143,7 @@ goog.ui.Prompt.prototype.getCols = function() {
 goog.ui.Prompt.prototype.createDom = function() {
   goog.ui.Prompt.superClass_.createDom.call(this);
   var cls = this.getClass();
-  var attrs = {className:goog.getCssName(cls, "userInput"), value:this.defaultValue_};
+  var attrs = {className:cls + "-userInput", value:this.defaultValue_};
   if(this.rows_ == 1) {
     this.userInputEl_ = this.getDomHelper().createDom("input", attrs);
     this.userInputEl_.type = "text";
@@ -10879,134 +11191,6 @@ goog.ui.Prompt.prototype.disposeInternal = function() {
   goog.ui.Prompt.superClass_.disposeInternal.call(this);
   this.defaulValue_ = null;
   this.userInputEl_ = null
-};
-// Input 106
-goog.provide("goog.debug.RelativeTimeProvider");
-goog.debug.RelativeTimeProvider = function() {
-  this.relativeTimeStart_ = goog.now()
-};
-goog.debug.RelativeTimeProvider.defaultInstance_ = new goog.debug.RelativeTimeProvider;
-goog.debug.RelativeTimeProvider.prototype.set = function(timeStamp) {
-  this.relativeTimeStart_ = timeStamp
-};
-goog.debug.RelativeTimeProvider.prototype.reset = function() {
-  this.set(goog.now())
-};
-goog.debug.RelativeTimeProvider.prototype.get = function() {
-  return this.relativeTimeStart_
-};
-goog.debug.RelativeTimeProvider.getDefaultInstance = function() {
-  return goog.debug.RelativeTimeProvider.defaultInstance_
-};
-// Input 107
-goog.provide("goog.debug.Formatter");
-goog.provide("goog.debug.HtmlFormatter");
-goog.provide("goog.debug.TextFormatter");
-goog.require("goog.debug.RelativeTimeProvider");
-goog.require("goog.string");
-goog.debug.Formatter = function(opt_prefix) {
-  this.prefix_ = opt_prefix || "";
-  this.startTimeProvider_ = goog.debug.RelativeTimeProvider.getDefaultInstance()
-};
-goog.debug.Formatter.prototype.showAbsoluteTime = true;
-goog.debug.Formatter.prototype.showRelativeTime = true;
-goog.debug.Formatter.prototype.showLoggerName = true;
-goog.debug.Formatter.prototype.showExceptionText = false;
-goog.debug.Formatter.prototype.showSeverityLevel = false;
-goog.debug.Formatter.prototype.formatRecord = goog.abstractMethod;
-goog.debug.Formatter.prototype.setStartTimeProvider = function(provider) {
-  this.startTimeProvider_ = provider
-};
-goog.debug.Formatter.prototype.getStartTimeProvider = function() {
-  return this.startTimeProvider_
-};
-goog.debug.Formatter.prototype.resetRelativeTimeStart = function() {
-  this.startTimeProvider_.reset()
-};
-goog.debug.Formatter.getDateTimeStamp_ = function(logRecord) {
-  var time = new Date(logRecord.getMillis());
-  return goog.debug.Formatter.getTwoDigitString_(time.getFullYear() - 2E3) + goog.debug.Formatter.getTwoDigitString_(time.getMonth() + 1) + goog.debug.Formatter.getTwoDigitString_(time.getDate()) + " " + goog.debug.Formatter.getTwoDigitString_(time.getHours()) + ":" + goog.debug.Formatter.getTwoDigitString_(time.getMinutes()) + ":" + goog.debug.Formatter.getTwoDigitString_(time.getSeconds()) + "." + goog.debug.Formatter.getTwoDigitString_(Math.floor(time.getMilliseconds() / 10))
-};
-goog.debug.Formatter.getTwoDigitString_ = function(n) {
-  if(n < 10) {
-    return"0" + n
-  }return String(n)
-};
-goog.debug.Formatter.getRelativeTime_ = function(logRecord, relativeTimeStart) {
-  var ms = logRecord.getMillis() - relativeTimeStart;
-  var sec = ms / 1E3;
-  var str = sec.toFixed(3);
-  var spacesToPrepend = 0;
-  if(sec < 1) {
-    spacesToPrepend = 2
-  }else {
-    while(sec < 100) {
-      spacesToPrepend++;
-      sec *= 10
-    }
-  }while(spacesToPrepend-- > 0) {
-    str = " " + str
-  }return str
-};
-goog.debug.HtmlFormatter = function(opt_prefix) {
-  goog.debug.Formatter.call(this, opt_prefix)
-};
-goog.inherits(goog.debug.HtmlFormatter, goog.debug.Formatter);
-goog.debug.HtmlFormatter.prototype.showExceptionText = true;
-goog.debug.HtmlFormatter.prototype.formatRecord = function(logRecord) {
-  var className;
-  switch(logRecord.getLevel().value) {
-    case goog.debug.Logger.Level.SHOUT.value:
-      className = "dbg-sh";
-      break;
-    case goog.debug.Logger.Level.SEVERE.value:
-      className = "dbg-sev";
-      break;
-    case goog.debug.Logger.Level.WARNING.value:
-      className = "dbg-w";
-      break;
-    case goog.debug.Logger.Level.INFO.value:
-      className = "dbg-i";
-      break;
-    case goog.debug.Logger.Level.FINE.value:
-    ;
-    default:
-      className = "dbg-f";
-      break
-  }
-  var sb = [];
-  sb.push(this.prefix_, " ");
-  if(this.showAbsoluteTime) {
-    sb.push("[", goog.debug.Formatter.getDateTimeStamp_(logRecord), "] ")
-  }if(this.showRelativeTime) {
-    sb.push("[", goog.string.whitespaceEscape(goog.debug.Formatter.getRelativeTime_(logRecord, this.startTimeProvider_.get())), "s] ")
-  }if(this.showLoggerName) {
-    sb.push("[", goog.string.htmlEscape(logRecord.getLoggerName()), "] ")
-  }sb.push('<span class="', className, '">', goog.string.newLineToBr(goog.string.whitespaceEscape(goog.string.htmlEscape(logRecord.getMessage()))));
-  if(this.showExceptionText && logRecord.getException()) {
-    sb.push("<br>", goog.string.newLineToBr(goog.string.whitespaceEscape(logRecord.getExceptionText() || "")))
-  }sb.push("</span><br>");
-  return sb.join("")
-};
-goog.debug.TextFormatter = function(opt_prefix) {
-  goog.debug.Formatter.call(this, opt_prefix)
-};
-goog.inherits(goog.debug.TextFormatter, goog.debug.Formatter);
-goog.debug.TextFormatter.prototype.formatRecord = function(logRecord) {
-  var sb = [];
-  sb.push(this.prefix_, " ");
-  if(this.showAbsoluteTime) {
-    sb.push("[", goog.debug.Formatter.getDateTimeStamp_(logRecord), "] ")
-  }if(this.showRelativeTime) {
-    sb.push("[", goog.debug.Formatter.getRelativeTime_(logRecord, this.startTimeProvider_.get()), "s] ")
-  }if(this.showLoggerName) {
-    sb.push("[", logRecord.getLoggerName(), "] ")
-  }if(this.showSeverityLevel) {
-    sb.push("[", logRecord.getLevel().name, "] ")
-  }sb.push(logRecord.getMessage(), "\n");
-  if(this.showExceptionText && logRecord.getException()) {
-    sb.push(logRecord.getExceptionText(), "\n")
-  }return sb.join("")
 };
 // Input 108
 goog.provide("goog.debug.Console");
@@ -11077,8 +11261,8 @@ goog.debug.Console.show = function() {
 };
 // Input 109
 goog.provide("goog.events.KeyNames");
-goog.events.KeyNames = {8:"backspace", 9:"tab", 13:"enter", 16:"shift", 17:"ctrl", 18:"alt", 19:"pause", 20:"caps-lock", 27:"esc", 32:"space", 33:"pg-up", 34:"pg-down", 35:"end", 36:"home", 37:"left", 38:"up", 39:"right", 40:"down", 45:"insert", 46:"delete", 48:"0", 49:"1", 50:"2", 51:"3", 52:"4", 53:"5", 54:"6", 55:"7", 56:"8", 57:"9", 61:"equals", 65:"a", 66:"b", 67:"c", 68:"d", 69:"e", 70:"f", 71:"g", 72:"h", 73:"i", 74:"j", 75:"k", 76:"l", 77:"m", 78:"n", 79:"o", 80:"p", 81:"q", 82:"r", 83:"s", 
-84:"t", 85:"u", 86:"v", 87:"w", 88:"x", 89:"y", 90:"z", 93:"context", 96:"num-0", 97:"num-1", 98:"num-2", 99:"num-3", 100:"num-4", 101:"num-5", 102:"num-6", 103:"num-7", 104:"num-8", 105:"num-9", 106:"num-multiply", 107:"num-plus", 109:"num-minus", 110:"num-period", 111:"num-division", 112:"f1", 113:"f2", 114:"f3", 115:"f4", 116:"f5", 117:"f6", 118:"f7", 119:"f8", 120:"f9", 121:"f10", 122:"f11", 123:"f12", 187:"equals", 188:",", 190:".", 191:"/", 220:"\\", 224:"win"};
+goog.events.KeyNames = {8:"backspace", 9:"tab", 13:"enter", 16:"shift", 17:"ctrl", 18:"alt", 19:"pause", 20:"caps-lock", 27:"esc", 32:"space", 33:"pg-up", 34:"pg-down", 35:"end", 36:"home", 37:"left", 38:"up", 39:"right", 40:"down", 45:"insert", 46:"delete", 48:"0", 49:"1", 50:"2", 51:"3", 52:"4", 53:"5", 54:"6", 55:"7", 56:"8", 57:"9", 65:"a", 66:"b", 67:"c", 68:"d", 69:"e", 70:"f", 71:"g", 72:"h", 73:"i", 74:"j", 75:"k", 76:"l", 77:"m", 78:"n", 79:"o", 80:"p", 81:"q", 82:"r", 83:"s", 84:"t", 85:"u", 
+86:"v", 87:"w", 88:"x", 89:"y", 90:"z", 93:"context", 107:"num-plus", 109:"num-minus", 112:"f1", 113:"f2", 114:"f3", 115:"f4", 116:"f5", 117:"f6", 118:"f7", 119:"f8", 120:"f9", 121:"f10", 122:"f11", 123:"f12", 187:"equals", 188:",", 190:".", 191:"/", 220:"\\", 224:"win"};
 // Input 110
 goog.provide("goog.ui.KeyboardShortcutEvent");
 goog.provide("goog.ui.KeyboardShortcutHandler");
@@ -11087,7 +11271,6 @@ goog.require("goog.Timer");
 goog.require("goog.events");
 goog.require("goog.events.Event");
 goog.require("goog.events.EventTarget");
-goog.require("goog.events.EventType");
 goog.require("goog.events.KeyCodes");
 goog.require("goog.events.KeyNames");
 goog.require("goog.object");
@@ -11110,7 +11293,6 @@ goog.ui.KeyboardShortcutHandler.EventType = {SHORTCUT_TRIGGERED:"shortcut", SHOR
 goog.ui.KeyboardShortcutHandler.nameToKeyCodeCache_;
 goog.ui.KeyboardShortcutHandler.prototype.keyTarget_;
 goog.ui.KeyboardShortcutHandler.prototype.metaKeyRecentlyReleased_;
-goog.ui.KeyboardShortcutHandler.prototype.isPrintableKey_;
 goog.ui.KeyboardShortcutHandler.getKeyCode = function(name) {
   if(!goog.ui.KeyboardShortcutHandler.nameToKeyCodeCache_) {
     var map = {};
@@ -11216,9 +11398,6 @@ goog.ui.KeyboardShortcutHandler.prototype.initializeKeyListener = function(keyTa
   goog.events.listen(this.keyTarget_, goog.events.EventType.KEYDOWN, this.handleKeyDown_, false, this);
   if(goog.userAgent.MAC && goog.userAgent.GECKO && goog.userAgent.isVersion("1.8")) {
     goog.events.listen(this.keyTarget_, goog.events.EventType.KEYUP, this.handleMacGeckoKeyUp_, false, this)
-  }if(goog.userAgent.WINDOWS && !goog.userAgent.GECKO) {
-    goog.events.listen(this.keyTarget_, goog.events.EventType.KEYPRESS, this.handleWindowsKeyPress_, false, this);
-    goog.events.listen(this.keyTarget_, goog.events.EventType.KEYUP, this.handleWindowsKeyUp_, false, this)
   }
 };
 goog.ui.KeyboardShortcutHandler.prototype.handleMacGeckoKeyUp_ = function(e) {
@@ -11234,26 +11413,10 @@ goog.ui.KeyboardShortcutHandler.prototype.handleMacGeckoKeyUp_ = function(e) {
     this.handleKeyDown_(e)
   }
 };
-goog.ui.KeyboardShortcutHandler.prototype.isPossiblePrintableKey_ = function(e) {
-  return goog.userAgent.WINDOWS && !goog.userAgent.GECKO && e.ctrlKey && e.altKey && !e.shiftKey
-};
-goog.ui.KeyboardShortcutHandler.prototype.handleWindowsKeyPress_ = function(e) {
-  if(e.keyCode > 32 && this.isPossiblePrintableKey_(e)) {
-    this.isPrintableKey_ = true
-  }
-};
-goog.ui.KeyboardShortcutHandler.prototype.handleWindowsKeyUp_ = function(e) {
-  if(!this.isPrintableKey_ && this.isPossiblePrintableKey_(e)) {
-    this.handleKeyDown_(e)
-  }
-};
 goog.ui.KeyboardShortcutHandler.prototype.clearKeyListener = function() {
   goog.events.unlisten(this.keyTarget_, goog.events.EventType.KEYDOWN, this.handleKeyDown_, false, this);
   if(goog.userAgent.MAC && goog.userAgent.GECKO && goog.userAgent.isVersion("1.8")) {
     goog.events.unlisten(this.keyTarget_, goog.events.EventType.KEYUP, this.handleMacGeckoKeyUp_, false, this)
-  }if(goog.userAgent.WINDOWS && !goog.userAgent.GECKO) {
-    goog.events.unlisten(this.keyTarget_, goog.events.EventType.KEYPRESS, this.handleWindowsKeyPress_, false, this);
-    goog.events.unlisten(this.keyTarget_, goog.events.EventType.KEYUP, this.handleWindowsKeyUp_, false, this)
   }this.keyTarget_ = null
 };
 goog.ui.KeyboardShortcutHandler.setShortcut_ = function(parent, strokes, identifier) {
@@ -11295,9 +11458,6 @@ goog.ui.KeyboardShortcutHandler.makeKey_ = function(keyCode, modifiers) {
 };
 goog.ui.KeyboardShortcutHandler.prototype.handleKeyDown_ = function(event) {
   if(!this.isValidShortcut_(event)) {
-    return
-  }if(event.type == "keydown" && this.isPossiblePrintableKey_(event)) {
-    this.isPrintableKey_ = false;
     return
   }var modifiers = (event.shiftKey ? goog.ui.KeyboardShortcutHandler.Modifiers.SHIFT : 0) | (event.ctrlKey ? goog.ui.KeyboardShortcutHandler.Modifiers.CTRL : 0) | (event.altKey ? goog.ui.KeyboardShortcutHandler.Modifiers.ALT : 0) | (event.metaKey ? goog.ui.KeyboardShortcutHandler.Modifiers.META : 0);
   var stroke = goog.ui.KeyboardShortcutHandler.makeKey_(event.keyCode, modifiers);
@@ -11365,32 +11525,150 @@ goog.ui.KeyboardShortcutEvent = function(type, identifier, target) {
 };
 goog.inherits(goog.ui.KeyboardShortcutEvent, goog.events.Event);
 // Input 111
+goog.provide("goog.json");
+goog.provide("goog.json.Serializer");
+goog.json.isValid_ = function(s) {
+  if(/^\s*$/.test(s)) {
+    return false
+  }var backslashesRe = /\\["\\\/bfnrtu]/g;
+  var simpleValuesRe = /"[^"\\\n\r\u2028\u2029\x00-\x08\x10-\x1f\x80-\x9f]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g;
+  var openBracketsRe = /(?:^|:|,)(?:[\s\u2028\u2029]*\[)+/g;
+  var remainderRe = /^[\],:{}\s\u2028\u2029]*$/;
+  return remainderRe.test(s.replace(backslashesRe, "@").replace(simpleValuesRe, "]").replace(openBracketsRe, ""))
+};
+goog.json.parse = function(s) {
+  var o = String(s);
+  if(goog.json.isValid_(o)) {
+    try {
+      return eval("(" + o + ")")
+    }catch(ex) {
+    }
+  }throw Error("Invalid JSON string: " + o);
+};
+goog.json.unsafeParse = function(s) {
+  return eval("(" + s + ")")
+};
+goog.json.serialize = function(object) {
+  return(new goog.json.Serializer).serialize(object)
+};
+goog.json.Serializer = function() {
+};
+goog.json.Serializer.prototype.serialize = function(object) {
+  var sb = [];
+  this.serialize_(object, sb);
+  return sb.join("")
+};
+goog.json.Serializer.prototype.serialize_ = function(object, sb) {
+  switch(typeof object) {
+    case "string":
+      this.serializeString_(object, sb);
+      break;
+    case "number":
+      this.serializeNumber_(object, sb);
+      break;
+    case "boolean":
+      sb.push(object);
+      break;
+    case "undefined":
+      sb.push("null");
+      break;
+    case "object":
+      if(object == null) {
+        sb.push("null");
+        break
+      }if(goog.isArray(object)) {
+        this.serializeArray_(object, sb);
+        break
+      }this.serializeObject_(object, sb);
+      break;
+    case "function":
+      break;
+    default:
+      throw Error("Unknown type: " + typeof object);
+  }
+};
+goog.json.Serializer.charToJsonCharCache_ = {'"':'\\"', "\\":"\\\\", "/":"\\/", "\u0008":"\\b", "\u000c":"\\f", "\n":"\\n", "\r":"\\r", "\t":"\\t", "\u000b":"\\u000b"};
+goog.json.Serializer.charsToReplace_ = /\uffff/.test("\uffff") ? /[\\\"\x00-\x1f\x7f-\uffff]/g : /[\\\"\x00-\x1f\x7f-\xff]/g;
+goog.json.Serializer.prototype.serializeString_ = function(s, sb) {
+  sb.push('"', s.replace(goog.json.Serializer.charsToReplace_, function(c) {
+    if(c in goog.json.Serializer.charToJsonCharCache_) {
+      return goog.json.Serializer.charToJsonCharCache_[c]
+    }var cc = c.charCodeAt(0);
+    var rv = "\\u";
+    if(cc < 16) {
+      rv += "000"
+    }else {
+      if(cc < 256) {
+        rv += "00"
+      }else {
+        if(cc < 4096) {
+          rv += "0"
+        }
+      }
+    }return goog.json.Serializer.charToJsonCharCache_[c] = rv + cc.toString(16)
+  }), '"')
+};
+goog.json.Serializer.prototype.serializeNumber_ = function(n, sb) {
+  sb.push(isFinite(n) && !isNaN(n) ? n : "null")
+};
+goog.json.Serializer.prototype.serializeArray_ = function(arr, sb) {
+  var l = arr.length;
+  sb.push("[");
+  var sep = "";
+  for(var i = 0;i < l;i++) {
+    sb.push(sep);
+    this.serialize_(arr[i], sb);
+    sep = ","
+  }sb.push("]")
+};
+goog.json.Serializer.prototype.serializeObject_ = function(obj, sb) {
+  sb.push("{");
+  var sep = "";
+  for(var key in obj) {
+    if(obj.hasOwnProperty(key)) {
+      var value = obj[key];
+      if(typeof value != "function") {
+        sb.push(sep);
+        this.serializeString_(key, sb);
+        sb.push(":");
+        this.serialize_(value, sb);
+        sep = ","
+      }
+    }
+  }sb.push("}")
+};
+// Input 112
 goog.provide("goog.memoize");
+goog.require("goog.json");
 goog.memoize = function(f, opt_serializer) {
   var functionUid = goog.getUid(f);
   var serializer = opt_serializer || goog.memoize.simpleSerializer;
   return function() {
-    if(goog.memoize.ENABLE_MEMOIZE) {
-      var cache = this[goog.memoize.CACHE_PROPERTY_] || (this[goog.memoize.CACHE_PROPERTY_] = {});
-      var key = serializer(functionUid, arguments);
-      return cache.hasOwnProperty(key) ? cache[key] : (cache[key] = f.apply(this, arguments))
-    }else {
-      return f.apply(this, arguments)
-    }
+    var cache = this[goog.memoize.CACHE_PROPERTY_];
+    if(!cache) {
+      cache = this[goog.memoize.CACHE_PROPERTY_] = {}
+    }var key = serializer(functionUid, arguments);
+    if(!(key in cache)) {
+      cache[key] = f.apply(this, arguments)
+    }return cache[key]
   }
 };
-goog.memoize.ENABLE_MEMOIZE = true;
 goog.memoize.clearCache = function(cacheOwner) {
   cacheOwner[goog.memoize.CACHE_PROPERTY_] = {}
 };
 goog.memoize.CACHE_PROPERTY_ = "closure_memoize_cache_";
+goog.memoize.jsonSerializer = function(functionUid, args) {
+  var context = Array.prototype.slice.call(args);
+  context.push(functionUid);
+  return goog.json.serialize(context)
+};
 goog.memoize.simpleSerializer = function(functionUid, args) {
   var context = [functionUid];
   for(var i = args.length - 1;i >= 0;--i) {
     context.push(typeof args[i], args[i])
   }return context.join("\u000b")
 };
-// Input 112
+// Input 113
 goog.provide("kemia.ring.Ring");
 goog.require("kemia.model.Flags");
 goog.require("goog.array");
@@ -11425,7 +11703,7 @@ kemia.ring.Ring.prototype.toString = function() {
     return" " + bond.toString()
   }, this).join("\n\t") + "\n\t"
 };
-// Input 113
+// Input 114
 goog.provide("kemia.ring.PathEdge");
 kemia.ring.PathEdge = function(_atoms) {
   this.atoms = _atoms
@@ -11473,7 +11751,7 @@ kemia.ring.PathEdge.prototype.getIntersection = function(others) {
     return this.atoms[0]
   }throw"Couldn't splice - no intersection";
 };
-// Input 114
+// Input 115
 goog.provide("kemia.ring.PathGraph");
 kemia.ring.PathGraph = function(molecule) {
   this.edges = new Array;
@@ -11538,7 +11816,7 @@ kemia.ring.PathGraph.prototype.spliceEdges = function(_edges) {
     }
   }return result
 };
-// Input 115
+// Input 116
 goog.provide("kemia.ring.Hanser");
 goog.require("goog.structs.Set");
 goog.require("goog.structs.Set");
@@ -11556,7 +11834,7 @@ kemia.ring.Hanser.findRings = function(molecule, maxLen) {
       var atom_ring = edge.atoms;
       goog.array.removeAt(atom_ring, atom_ring.length - 1);
       for(var k = 0, lk = atom_ring.length;k < lk;k++) {
-        atom_ring[k] = atom_ring[k]
+        atom_ring[k] = molecule.indexOfAtom(atom_ring[k])
       }atomOnlyRings.push(atom_ring)
     }
   }goog.array.sort(atomOnlyRings);
@@ -11573,7 +11851,7 @@ kemia.ring.Hanser.createRing = function(atoms, molecule) {
   var ring = new kemia.ring.Ring(atoms, bonds);
   return ring
 };
-// Input 116
+// Input 117
 goog.provide("kemia.ring.SSSR");
 goog.require("goog.structs.Set");
 goog.require("goog.array");
@@ -11831,7 +12109,7 @@ kemia.ring.SSSR.findRings = function(molecule) {
   }return indexes
 };
 goog.exportSymbol("kemia.ring.SSSR.findRings", kemia.ring.SSSR.findRings);
-// Input 117
+// Input 118
 goog.provide("kemia.ring.RingFinder");
 goog.require("kemia.ring.Hanser");
 goog.require("kemia.ring.SSSR");
@@ -12061,7 +12339,7 @@ kemia.ring.RingFinder.findRings = function(molecule) {
   return kemia.ring.RingFinder.createRingSystems(molecule)
 };
 goog.exportSymbol("kemia.ring.RingFinder.findRings", kemia.ring.RingFinder.findRings);
-// Input 118
+// Input 119
 goog.provide("kemia.model.Molecule");
 goog.require("goog.array");
 goog.require("kemia.ring.RingFinder");
@@ -12378,7 +12656,7 @@ kemia.model.Molecule.prototype.sproutFragment = function(attachment_atom, fragme
     kemia.model.Molecule.mergeMolecules(fragment_atom, attachment_atom)
   }
 };
-kemia.model.Molecule.prototype.sproutBond = function(atom, opt_order, opt_stereo) {
+kemia.model.Molecule.prototype.sproutBond = function(atom, opt_order, opt_stereo, opt_symbol) {
   var bond_length = 1.25;
   var bonds = atom.bonds.getValues();
   if(bonds.length) {
@@ -12387,7 +12665,10 @@ kemia.model.Molecule.prototype.sproutBond = function(atom, opt_order, opt_stereo
     }, 0) / bonds.length
   }var new_angle = kemia.model.Atom.nextBondAngle(atom);
   if(new_angle != undefined) {
-    var new_atom = new kemia.model.Atom("C", atom.coord.x + goog.math.angleDx(new_angle, bond_length), atom.coord.y + goog.math.angleDy(new_angle, bond_length));
+    var symb = "C";
+    if(opt_symbol) {
+      symb = opt_symbol
+    }var new_atom = new kemia.model.Atom(symb, atom.coord.x + goog.math.angleDx(new_angle, bond_length), atom.coord.y + goog.math.angleDy(new_angle, bond_length));
     var new_bond = new kemia.model.Bond(atom, new_atom, opt_order, opt_stereo);
     this.addAtom(new_atom);
     this.addBond(new_bond);
@@ -12395,7 +12676,7 @@ kemia.model.Molecule.prototype.sproutBond = function(atom, opt_order, opt_stereo
   }
 };
 kemia.model.Molecule.prototype.logger = goog.debug.Logger.getLogger("kemia.model.Molecule");
-// Input 119
+// Input 120
 goog.provide("kemia.model.Arrow");
 goog.require("kemia.math.Line");
 goog.require("goog.math.Vec2");
@@ -12445,7 +12726,7 @@ kemia.model.Arrow.prototype.toString = function() {
 };
 kemia.model.Arrow.STYLES = {FORWARD:1, BACKWARD:2, BIDIRECTIONAL:3};
 kemia.model.Arrow.ORIENTATION = {AHEAD:1, BEHIND:2};
-// Input 120
+// Input 121
 goog.provide("kemia.model.Reaction");
 goog.require("kemia.model.Molecule");
 goog.require("goog.math.Box");
@@ -12618,123 +12899,10 @@ kemia.model.Reaction.prototype.centerArrow = function() {
   var diff = goog.math.Vec2.fromCoordinate(midpoint).subtract(goog.math.Vec2.fromCoordinate(this.arrow.getCenter()));
   this.arrow.translate(diff)
 };
-// Input 121
+// Input 122
 goog.provide("kemia.model.Plus");
 kemia.model.Plus = function(coord) {
   this.coord = goog.isDef(coord) ? coord : new goog.math.Coordinate(0, 0)
-};
-// Input 122
-goog.provide("goog.json");
-goog.provide("goog.json.Serializer");
-goog.json.isValid_ = function(s) {
-  if(/^\s*$/.test(s)) {
-    return false
-  }var backslashesRe = /\\["\\\/bfnrtu]/g;
-  var simpleValuesRe = /"[^"\\\n\r\u2028\u2029\x00-\x08\x10-\x1f\x80-\x9f]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g;
-  var openBracketsRe = /(?:^|:|,)(?:[\s\u2028\u2029]*\[)+/g;
-  var remainderRe = /^[\],:{}\s\u2028\u2029]*$/;
-  return remainderRe.test(s.replace(backslashesRe, "@").replace(simpleValuesRe, "]").replace(openBracketsRe, ""))
-};
-goog.json.parse = function(s) {
-  var o = String(s);
-  if(goog.json.isValid_(o)) {
-    try {
-      return eval("(" + o + ")")
-    }catch(ex) {
-    }
-  }throw Error("Invalid JSON string: " + o);
-};
-goog.json.unsafeParse = function(s) {
-  return eval("(" + s + ")")
-};
-goog.json.serialize = function(object) {
-  return(new goog.json.Serializer).serialize(object)
-};
-goog.json.Serializer = function() {
-};
-goog.json.Serializer.prototype.serialize = function(object) {
-  var sb = [];
-  this.serialize_(object, sb);
-  return sb.join("")
-};
-goog.json.Serializer.prototype.serialize_ = function(object, sb) {
-  switch(typeof object) {
-    case "string":
-      this.serializeString_(object, sb);
-      break;
-    case "number":
-      this.serializeNumber_(object, sb);
-      break;
-    case "boolean":
-      sb.push(object);
-      break;
-    case "undefined":
-      sb.push("null");
-      break;
-    case "object":
-      if(object == null) {
-        sb.push("null");
-        break
-      }if(goog.isArray(object)) {
-        this.serializeArray_(object, sb);
-        break
-      }this.serializeObject_(object, sb);
-      break;
-    case "function":
-      break;
-    default:
-      throw Error("Unknown type: " + typeof object);
-  }
-};
-goog.json.Serializer.charToJsonCharCache_ = {'"':'\\"', "\\":"\\\\", "/":"\\/", "\u0008":"\\b", "\u000c":"\\f", "\n":"\\n", "\r":"\\r", "\t":"\\t", "\u000b":"\\u000b"};
-goog.json.Serializer.charsToReplace_ = /\uffff/.test("\uffff") ? /[\\\"\x00-\x1f\x7f-\uffff]/g : /[\\\"\x00-\x1f\x7f-\xff]/g;
-goog.json.Serializer.prototype.serializeString_ = function(s, sb) {
-  sb.push('"', s.replace(goog.json.Serializer.charsToReplace_, function(c) {
-    if(c in goog.json.Serializer.charToJsonCharCache_) {
-      return goog.json.Serializer.charToJsonCharCache_[c]
-    }var cc = c.charCodeAt(0);
-    var rv = "\\u";
-    if(cc < 16) {
-      rv += "000"
-    }else {
-      if(cc < 256) {
-        rv += "00"
-      }else {
-        if(cc < 4096) {
-          rv += "0"
-        }
-      }
-    }return goog.json.Serializer.charToJsonCharCache_[c] = rv + cc.toString(16)
-  }), '"')
-};
-goog.json.Serializer.prototype.serializeNumber_ = function(n, sb) {
-  sb.push(isFinite(n) && !isNaN(n) ? n : "null")
-};
-goog.json.Serializer.prototype.serializeArray_ = function(arr, sb) {
-  var l = arr.length;
-  sb.push("[");
-  var sep = "";
-  for(var i = 0;i < l;i++) {
-    sb.push(sep);
-    this.serialize_(arr[i], sb);
-    sep = ","
-  }sb.push("]")
-};
-goog.json.Serializer.prototype.serializeObject_ = function(obj, sb) {
-  sb.push("{");
-  var sep = "";
-  for(var key in obj) {
-    if(obj.hasOwnProperty(key)) {
-      var value = obj[key];
-      if(typeof value != "function") {
-        sb.push(sep);
-        this.serializeString_(key, sb);
-        sb.push(":");
-        this.serialize_(value, sb);
-        sep = ","
-      }
-    }
-  }sb.push("}")
 };
 // Input 123
 goog.provide("kemia.io.json");
@@ -13402,7 +13570,7 @@ goog.string.StringBuffer.prototype.toString = function() {
 };
 // Input 126
 goog.provide("goog.ui.ControlContent");
-goog.ui.ControlContent;
+goog.ui.ControlContent = goog.typedef;
 // Input 127
 goog.provide("goog.events.KeyEvent");
 goog.provide("goog.events.KeyHandler");
@@ -13413,10 +13581,10 @@ goog.require("goog.events.EventTarget");
 goog.require("goog.events.EventType");
 goog.require("goog.events.KeyCodes");
 goog.require("goog.userAgent");
-goog.events.KeyHandler = function(opt_element, opt_capture) {
+goog.events.KeyHandler = function(opt_element) {
   goog.events.EventTarget.call(this);
   if(opt_element) {
-    this.attach(opt_element, opt_capture)
+    this.attach(opt_element)
   }
 };
 goog.inherits(goog.events.KeyHandler, goog.events.EventTarget);
@@ -13434,10 +13602,7 @@ F12:goog.events.KeyCodes.F12, "U+007F":goog.events.KeyCodes.DELETE, Home:goog.ev
 goog.events.KeyHandler.mozKeyCodeToKeyCodeMap_ = {61:187, 59:186};
 goog.events.KeyHandler.USES_KEYDOWN_ = goog.userAgent.IE || goog.userAgent.WEBKIT && goog.userAgent.isVersion("525");
 goog.events.KeyHandler.prototype.handleKeyDown_ = function(e) {
-  if(goog.userAgent.WEBKIT && (this.lastKey_ == goog.events.KeyCodes.CTRL && !e.ctrlKey || this.lastKey_ == goog.events.KeyCodes.ALT && !e.altKey)) {
-    this.lastKey_ = -1;
-    this.keyCode_ = -1
-  }if(goog.events.KeyHandler.USES_KEYDOWN_ && !goog.events.KeyCodes.firesKeyPressEvent(e.keyCode, this.lastKey_, e.shiftKey, e.ctrlKey, e.altKey)) {
+  if(goog.events.KeyHandler.USES_KEYDOWN_ && !goog.events.KeyCodes.firesKeyPressEvent(e.keyCode, this.lastKey_, e.shiftKey, e.ctrlKey, e.altKey)) {
     this.handleEvent(e)
   }else {
     if(goog.userAgent.GECKO && e.keyCode in goog.events.KeyHandler.mozKeyCodeToKeyCodeMap_) {
@@ -13499,13 +13664,13 @@ goog.events.KeyHandler.prototype.handleEvent = function(e) {
 goog.events.KeyHandler.prototype.getElement = function() {
   return this.element_
 };
-goog.events.KeyHandler.prototype.attach = function(element, opt_capture) {
+goog.events.KeyHandler.prototype.attach = function(element) {
   if(this.keyUpKey_) {
     this.detach()
   }this.element_ = element;
-  this.keyPressKey_ = goog.events.listen(this.element_, goog.events.EventType.KEYPRESS, this, opt_capture);
-  this.keyDownKey_ = goog.events.listen(this.element_, goog.events.EventType.KEYDOWN, this.handleKeyDown_, opt_capture, this);
-  this.keyUpKey_ = goog.events.listen(this.element_, goog.events.EventType.KEYUP, this.handleKeyup_, opt_capture, this)
+  this.keyPressKey_ = goog.events.listen(this.element_, goog.events.EventType.KEYPRESS, this);
+  this.keyDownKey_ = goog.events.listen(this.element_, goog.events.EventType.KEYDOWN, this.handleKeyDown_, false, this);
+  this.keyUpKey_ = goog.events.listen(this.element_, goog.events.EventType.KEYUP, this.handleKeyup_, false, this)
 };
 goog.events.KeyHandler.prototype.detach = function() {
   if(this.keyPressKey_) {
@@ -13516,8 +13681,7 @@ goog.events.KeyHandler.prototype.detach = function() {
     this.keyDownKey_ = null;
     this.keyUpKey_ = null
   }this.element_ = null;
-  this.lastKey_ = -1;
-  this.keyCode_ = -1
+  this.lastKey_ = -1
 };
 goog.events.KeyHandler.prototype.disposeInternal = function() {
   goog.events.KeyHandler.superClass_.disposeInternal.call(this);
@@ -14024,15 +14188,12 @@ goog.ui.Control.prototype.setContent = function(content) {
 goog.ui.Control.prototype.setContentInternal = function(content) {
   this.content_ = content
 };
-goog.ui.Control.prototype.getCaptionInternal = function(getChildElementContent) {
+goog.ui.Control.prototype.getCaption = function() {
   var content = this.getContent();
   if(!content || goog.isString(content)) {
     return content
-  }var caption = goog.isArray(content) ? goog.array.map(content, getChildElementContent).join("") : goog.dom.getTextContent(content);
+  }var caption = goog.isArray(content) ? goog.array.map(content, goog.dom.getTextContent).join("") : goog.dom.getTextContent(content);
   return caption && goog.string.trim(caption)
-};
-goog.ui.Control.prototype.getCaption = function() {
-  return this.getCaptionInternal(goog.dom.getTextContent)
 };
 goog.ui.Control.prototype.setCaption = function(caption) {
   this.setContent(caption)
@@ -14174,21 +14335,18 @@ goog.ui.Control.prototype.isTransitionAllowed = function(state, enable) {
   return this.isSupportedState(state) && this.hasState(state) != enable && (!(this.statesWithTransitionEvents_ & state) || this.dispatchEvent(goog.ui.Component.getStateTransitionEvent(state, enable))) && !this.isDisposed()
 };
 goog.ui.Control.prototype.handleMouseOver = function(e) {
-  if(!goog.ui.Control.isMouseEventWithinElement_(e, this.getElement()) && this.dispatchEvent(goog.ui.Component.EventType.ENTER) && this.isEnabled() && this.isAutoState(goog.ui.Component.State.HOVER)) {
+  if(e.relatedTarget && !goog.dom.contains(this.getElement(), e.relatedTarget) && this.dispatchEvent(goog.ui.Component.EventType.ENTER) && this.isEnabled() && this.isAutoState(goog.ui.Component.State.HOVER)) {
     this.setHighlighted(true)
   }
 };
 goog.ui.Control.prototype.handleMouseOut = function(e) {
-  if(!goog.ui.Control.isMouseEventWithinElement_(e, this.getElement()) && this.dispatchEvent(goog.ui.Component.EventType.LEAVE)) {
+  if(e.relatedTarget && !goog.dom.contains(this.getElement(), e.relatedTarget) && this.dispatchEvent(goog.ui.Component.EventType.LEAVE)) {
     if(this.isAutoState(goog.ui.Component.State.ACTIVE)) {
       this.setActive(false)
     }if(this.isAutoState(goog.ui.Component.State.HOVER)) {
       this.setHighlighted(false)
     }
   }
-};
-goog.ui.Control.isMouseEventWithinElement_ = function(e, elem) {
-  return!!e.relatedTarget && goog.dom.contains(elem, e.relatedTarget)
 };
 goog.ui.Control.prototype.handleMouseDown = function(e) {
   if(this.isEnabled()) {
@@ -14338,6 +14496,15 @@ goog.ui.ContainerRenderer.CSS_CLASS = goog.getCssName("goog-container");
 goog.ui.ContainerRenderer.prototype.getAriaRole = function() {
   return undefined
 };
+goog.ui.ContainerRenderer.prototype.hasTabIndex = function(element) {
+  if(element) {
+    var attrNode = element.getAttributeNode("tabindex");
+    if(attrNode && attrNode.specified) {
+      var index = element.tabIndex;
+      return goog.isNumber(index) && index >= 0
+    }
+  }return false
+};
 goog.ui.ContainerRenderer.prototype.enableTabIndex = function(element, enable) {
   if(element) {
     element.tabIndex = enable ? 0 : -1
@@ -14370,7 +14537,7 @@ goog.ui.ContainerRenderer.prototype.decorate = function(container, element) {
     }, this)
   }if(!hasBaseClass) {
     goog.dom.classes.add(element, baseClass)
-  }this.decorateChildren(container, this.getContentElement(element));
+  }this.decorateChildren(container, element);
   return element
 };
 goog.ui.ContainerRenderer.prototype.setStateFromClassName = function(container, className, baseClass) {
@@ -14386,9 +14553,9 @@ goog.ui.ContainerRenderer.prototype.setStateFromClassName = function(container, 
     }
   }
 };
-goog.ui.ContainerRenderer.prototype.decorateChildren = function(container, element, opt_firstChild) {
+goog.ui.ContainerRenderer.prototype.decorateChildren = function(container, element) {
   if(element) {
-    var node = opt_firstChild || element.firstChild, next;
+    var node = element.firstChild, next;
     while(node && node.parentNode == element) {
       next = node.nextSibling;
       if(node.nodeType == goog.dom.NodeType.ELEMENT) {
@@ -14440,7 +14607,6 @@ goog.ui.ContainerRenderer.prototype.getDefaultOrientation = function() {
 };
 // Input 135
 goog.provide("goog.ui.Container");
-goog.provide("goog.ui.Container.EventType");
 goog.provide("goog.ui.Container.Orientation");
 goog.require("goog.dom");
 goog.require("goog.dom.a11y");
@@ -14461,7 +14627,7 @@ goog.ui.Container = function(opt_orientation, opt_renderer, opt_domHelper) {
   this.orientation_ = opt_orientation || this.renderer_.getDefaultOrientation()
 };
 goog.inherits(goog.ui.Container, goog.ui.Component);
-goog.ui.Container.EventType = {AFTER_SHOW:"aftershow", AFTER_HIDE:"afterhide"};
+goog.ui.Container.EventType = {AFTER_SHOW:"aftershow"};
 goog.ui.Container.Orientation = {HORIZONTAL:"horizontal", VERTICAL:"vertical"};
 goog.ui.Container.prototype.keyEventTarget_ = null;
 goog.ui.Container.prototype.keyHandler_ = null;
@@ -14474,7 +14640,6 @@ goog.ui.Container.prototype.highlightedIndex_ = -1;
 goog.ui.Container.prototype.openItem_ = null;
 goog.ui.Container.prototype.mouseButtonPressed_ = false;
 goog.ui.Container.prototype.allowFocusableChildren_ = false;
-goog.ui.Container.prototype.openFollowsHighlight_ = true;
 goog.ui.Container.prototype.childElementIdMap_ = null;
 goog.ui.Container.prototype.getKeyEventTarget = function() {
   return this.keyEventTarget_ || this.renderer_.getKeyEventTarget(this)
@@ -14576,7 +14741,7 @@ goog.ui.Container.prototype.handleHighlightItem = function(e) {
     item = this.getHighlighted();
     if(this.isMouseButtonPressed()) {
       item.setActive(true)
-    }if(this.openFollowsHighlight_ && this.openItem_ && item != this.openItem_) {
+    }if(this.openItem_ && item != this.openItem_) {
       if(item.isSupportedState(goog.ui.Component.State.OPENED)) {
         item.setOpen(true)
       }else {
@@ -14607,7 +14772,7 @@ goog.ui.Container.prototype.handleMouseDown = function(e) {
   if(this.enabled_) {
     this.setMouseButtonPressed(true)
   }var keyTarget = this.getKeyEventTarget();
-  if(keyTarget && goog.dom.isFocusableTabIndex(keyTarget)) {
+  if(this.renderer_.hasTabIndex(keyTarget)) {
     keyTarget.focus()
   }else {
     e.preventDefault()
@@ -14638,7 +14803,7 @@ goog.ui.Container.prototype.handleChildMouseEvents = function(e) {
 goog.ui.Container.prototype.getOwnerControl = function(node) {
   if(this.childElementIdMap_) {
     var elem = this.getElement();
-    while(node && node !== elem) {
+    while(node && node.parentNode && node != elem) {
       var id = node.id;
       if(id in this.childElementIdMap_) {
         return this.childElementIdMap_[id]
@@ -14656,7 +14821,7 @@ goog.ui.Container.prototype.handleBlur = function(e) {
   }
 };
 goog.ui.Container.prototype.handleKeyEvent = function(e) {
-  if(this.isEnabled() && this.isVisible() && (this.getChildCount() != 0 || this.keyEventTarget_) && this.handleKeyEventInternal(e)) {
+  if(this.isEnabled() && this.isVisible() && this.getChildCount() != 0 && this.handleKeyEventInternal(e)) {
     e.preventDefault();
     e.stopPropagation();
     return true
@@ -14668,8 +14833,6 @@ goog.ui.Container.prototype.handleKeyEventInternal = function(e) {
     return true
   }if(this.openItem_ && this.openItem_ != highlighted && typeof this.openItem_.handleKeyEvent == "function" && this.openItem_.handleKeyEvent(e)) {
     return true
-  }if(e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) {
-    return false
   }switch(e.keyCode) {
     case goog.events.KeyCodes.ESC:
       if(this.isFocusable()) {
@@ -14746,21 +14909,18 @@ goog.ui.Container.prototype.addChildAt = function(control, index, opt_render) {
   }
 };
 goog.ui.Container.prototype.removeChild = function(control, opt_unrender) {
-  control = goog.isString(control) ? this.getChild(control) : control;
-  if(control) {
-    var index = this.indexOfChild(control);
-    if(index != -1) {
-      if(index == this.highlightedIndex_) {
-        control.setHighlighted(false)
-      }else {
-        if(index < this.highlightedIndex_) {
-          this.highlightedIndex_--
-        }
+  var index = this.indexOfChild(control);
+  if(index != -1) {
+    if(index == this.highlightedIndex_) {
+      control.setHighlighted(false)
+    }else {
+      if(index < this.highlightedIndex_) {
+        this.highlightedIndex_--
       }
-    }var childElem = control.getElement();
-    if(childElem && childElem.id) {
-      goog.object.remove(this.childElementIdMap_, childElem.id)
     }
+  }var childElem = control.getElement();
+  if(childElem && childElem.id) {
+    goog.object.remove(this.childElementIdMap_, childElem.id)
   }control = goog.ui.Container.superClass_.removeChild.call(this, control, opt_unrender);
   control.setHandleMouseEvents(true);
   return control
@@ -14784,8 +14944,8 @@ goog.ui.Container.prototype.setVisible = function(visible, opt_force) {
       goog.style.showElement(elem, visible);
       if(this.isFocusable()) {
         this.renderer_.enableTabIndex(this.getKeyEventTarget(), this.enabled_ && this.visible_)
-      }if(!opt_force) {
-        this.dispatchEvent(this.visible_ ? goog.ui.Container.EventType.AFTER_SHOW : goog.ui.Container.EventType.AFTER_HIDE)
+      }if(this.visible_ && !opt_force) {
+        this.dispatchEvent(goog.ui.Container.EventType.AFTER_SHOW)
       }
     }return true
   }return false
@@ -14835,12 +14995,6 @@ goog.ui.Container.prototype.isFocusableChildrenAllowed = function() {
 };
 goog.ui.Container.prototype.setFocusableChildrenAllowed = function(focusable) {
   this.allowFocusableChildren_ = focusable
-};
-goog.ui.Container.prototype.isOpenFollowsHighlight = function() {
-  return this.openFollowsHighlight_
-};
-goog.ui.Container.prototype.setOpenFollowsHighlight = function(follow) {
-  this.openFollowsHighlight_ = follow
 };
 goog.ui.Container.prototype.getHighlightedIndex = function() {
   return this.highlightedIndex_
@@ -14902,9 +15056,6 @@ goog.ui.Container.prototype.canHighlightItem = function(item) {
 };
 goog.ui.Container.prototype.setHighlightedIndexFromKeyEvent = function(index) {
   this.setHighlightedIndex(index)
-};
-goog.ui.Container.prototype.getOpenItem = function() {
-  return this.openItem_
 };
 goog.ui.Container.prototype.isMouseButtonPressed = function() {
   return this.mouseButtonPressed_
@@ -15065,20 +15216,15 @@ goog.ui.MenuItem.prototype.setSelectable = function(selectable) {
     this.setChecked(false)
   }var element = this.getElement();
   if(element) {
-    this.getRenderer().setSelectable(this, element, selectable)
+    this.renderer_.setSelectable(this, element, selectable)
   }
 };
 goog.ui.MenuItem.prototype.setCheckable = function(checkable) {
   this.setSupportedState(goog.ui.Component.State.CHECKED, checkable);
   var element = this.getElement();
   if(element) {
-    this.getRenderer().setCheckable(this, element, checkable)
+    this.renderer_.setCheckable(this, element, checkable)
   }
-};
-goog.ui.MenuItem.prototype.getCaption = function() {
-  return this.getCaptionInternal(function(element) {
-    return goog.dom.classes.has(element, goog.getCssName("goog-menuitem-accel")) ? "" : goog.dom.getTextContent(element)
-  })
 };
 goog.ui.registry.setDecoratorByClassName(goog.ui.MenuItemRenderer.CSS_CLASS, function() {
   return new goog.ui.MenuItem(null)
@@ -15159,14 +15305,10 @@ goog.ui.Toolbar = function(opt_renderer, opt_orientation, opt_domHelper) {
 };
 goog.inherits(goog.ui.Toolbar, goog.ui.Container);
 // Input 143
-goog.provide("goog.ui.ButtonSide");
-goog.ui.ButtonSide = {NONE:0, START:1, END:2, BOTH:3};
-// Input 144
 goog.provide("goog.ui.ButtonRenderer");
 goog.require("goog.dom.a11y");
 goog.require("goog.dom.a11y.Role");
 goog.require("goog.dom.a11y.State");
-goog.require("goog.ui.ButtonSide");
 goog.require("goog.ui.Component.State");
 goog.require("goog.ui.ControlRenderer");
 goog.ui.ButtonRenderer = function() {
@@ -15221,13 +15363,13 @@ goog.ui.ButtonRenderer.prototype.setCollapsed = function(button, sides) {
   var isRtl = button.isRightToLeft();
   var collapseLeftClassName = goog.getCssName(this.getStructuralCssClass(), "collapse-left");
   var collapseRightClassName = goog.getCssName(this.getStructuralCssClass(), "collapse-right");
-  button.enableClassName(isRtl ? collapseRightClassName : collapseLeftClassName, !!(sides & goog.ui.ButtonSide.START));
-  button.enableClassName(isRtl ? collapseLeftClassName : collapseRightClassName, !!(sides & goog.ui.ButtonSide.END))
+  button.enableClassName(isRtl ? collapseRightClassName : collapseLeftClassName, !!(sides & goog.ui.Button.Side.START));
+  button.enableClassName(isRtl ? collapseLeftClassName : collapseRightClassName, !!(sides & goog.ui.Button.Side.END))
 };
 goog.ui.ButtonRenderer.prototype.getCssClass = function() {
   return goog.ui.ButtonRenderer.CSS_CLASS
 };
-// Input 145
+// Input 144
 goog.provide("goog.ui.NativeButtonRenderer");
 goog.require("goog.dom.classes");
 goog.require("goog.events.EventType");
@@ -15284,12 +15426,11 @@ goog.ui.NativeButtonRenderer.prototype.setUpNativeButton_ = function(button) {
   button.setAutoStates(goog.ui.Component.State.ALL, false);
   button.setSupportedState(goog.ui.Component.State.FOCUSED, false)
 };
-// Input 146
+// Input 145
 goog.provide("goog.ui.Button");
 goog.provide("goog.ui.Button.Side");
 goog.require("goog.events.KeyCodes");
 goog.require("goog.ui.ButtonRenderer");
-goog.require("goog.ui.ButtonSide");
 goog.require("goog.ui.Control");
 goog.require("goog.ui.ControlContent");
 goog.require("goog.ui.NativeButtonRenderer");
@@ -15297,7 +15438,7 @@ goog.ui.Button = function(content, opt_renderer, opt_domHelper) {
   goog.ui.Control.call(this, content, opt_renderer || goog.ui.NativeButtonRenderer.getInstance(), opt_domHelper)
 };
 goog.inherits(goog.ui.Button, goog.ui.Control);
-goog.ui.Button.Side = goog.ui.ButtonSide;
+goog.ui.Button.Side = {NONE:0, START:1, END:2, BOTH:3};
 goog.ui.Button.prototype.value_;
 goog.ui.Button.prototype.tooltip_;
 goog.ui.Button.prototype.getValue = function() {
@@ -15345,7 +15486,7 @@ goog.ui.Button.prototype.handleKeyEventInternal = function(e) {
 goog.ui.registry.setDecoratorByClassName(goog.ui.ButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.Button(null)
 });
-// Input 147
+// Input 146
 goog.provide("goog.ui.CustomButtonRenderer");
 goog.require("goog.dom");
 goog.require("goog.dom.classes");
@@ -15412,7 +15553,7 @@ goog.ui.CustomButtonRenderer.trimTextNodes_ = function(element, fromStart) {
     }
   }
 };
-// Input 148
+// Input 147
 goog.provide("goog.ui.ToolbarButtonRenderer");
 goog.require("goog.ui.CustomButtonRenderer");
 goog.ui.ToolbarButtonRenderer = function() {
@@ -15424,7 +15565,7 @@ goog.ui.ToolbarButtonRenderer.CSS_CLASS = goog.getCssName("goog-toolbar-button")
 goog.ui.ToolbarButtonRenderer.prototype.getCssClass = function() {
   return goog.ui.ToolbarButtonRenderer.CSS_CLASS
 };
-// Input 149
+// Input 148
 goog.provide("goog.ui.ToolbarButton");
 goog.require("goog.ui.Button");
 goog.require("goog.ui.ControlContent");
@@ -15437,7 +15578,7 @@ goog.inherits(goog.ui.ToolbarButton, goog.ui.Button);
 goog.ui.registry.setDecoratorByClassName(goog.ui.ToolbarButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.ToolbarButton(null)
 });
-// Input 150
+// Input 149
 goog.provide("goog.color.names");
 goog.color.names = {aliceblue:"#f0f8ff", antiquewhite:"#faebd7", aqua:"#00ffff", aquamarine:"#7fffd4", azure:"#f0ffff", beige:"#f5f5dc", bisque:"#ffe4c4", black:"#000000", blanchedalmond:"#ffebcd", blue:"#0000ff", blueviolet:"#8a2be2", brown:"#a52a2a", burlywood:"#deb887", cadetblue:"#5f9ea0", chartreuse:"#7fff00", chocolate:"#d2691e", coral:"#ff7f50", cornflowerblue:"#6495ed", cornsilk:"#fff8dc", crimson:"#dc143c", cyan:"#00ffff", darkblue:"#00008b", darkcyan:"#008b8b", darkgoldenrod:"#b8860b", 
 darkgray:"#a9a9a9", darkgreen:"#006400", darkgrey:"#a9a9a9", darkkhaki:"#bdb76b", darkmagenta:"#8b008b", darkolivegreen:"#556b2f", darkorange:"#ff8c00", darkorchid:"#9932cc", darkred:"#8b0000", darksalmon:"#e9967a", darkseagreen:"#8fbc8f", darkslateblue:"#483d8b", darkslategray:"#2f4f4f", darkslategrey:"#2f4f4f", darkturquoise:"#00ced1", darkviolet:"#9400d3", deeppink:"#ff1493", deepskyblue:"#00bfff", dimgray:"#696969", dimgrey:"#696969", dodgerblue:"#1e90ff", firebrick:"#b22222", floralwhite:"#fffaf0", 
@@ -15446,7 +15587,7 @@ lightgreen:"#90ee90", lightgrey:"#d3d3d3", lightpink:"#ffb6c1", lightsalmon:"#ff
 mediumturquoise:"#48d1cc", mediumvioletred:"#c71585", midnightblue:"#191970", mintcream:"#f5fffa", mistyrose:"#ffe4e1", moccasin:"#ffe4b5", navajowhite:"#ffdead", navy:"#000080", oldlace:"#fdf5e6", olive:"#808000", olivedrab:"#6b8e23", orange:"#ffa500", orangered:"#ff4500", orchid:"#da70d6", palegoldenrod:"#eee8aa", palegreen:"#98fb98", paleturquoise:"#afeeee", palevioletred:"#d87093", papayawhip:"#ffefd5", peachpuff:"#ffdab9", peru:"#cd853f", pink:"#ffc0cb", plum:"#dda0dd", powderblue:"#b0e0e6", 
 purple:"#800080", red:"#ff0000", rosybrown:"#bc8f8f", royalblue:"#4169e1", saddlebrown:"#8b4513", salmon:"#fa8072", sandybrown:"#f4a460", seagreen:"#2e8b57", seashell:"#fff5ee", sienna:"#a0522d", silver:"#c0c0c0", skyblue:"#87ceeb", slateblue:"#6a5acd", slategray:"#708090", slategrey:"#708090", snow:"#fffafa", springgreen:"#00ff7f", steelblue:"#4682b4", tan:"#d2b48c", teal:"#008080", thistle:"#d8bfd8", tomato:"#ff6347", turquoise:"#40e0d0", violet:"#ee82ee", wheat:"#f5deb3", white:"#ffffff", whitesmoke:"#f5f5f5", 
 yellow:"#ffff00", yellowgreen:"#9acd32"};
-// Input 151
+// Input 150
 goog.provide("goog.color");
 goog.require("goog.color.names");
 goog.require("goog.math");
@@ -15763,39 +15904,7 @@ goog.color.yiqBrightnessDiff_ = function(rgb1, rgb2) {
 goog.color.colorDiff_ = function(rgb1, rgb2) {
   return Math.abs(rgb1[0] - rgb2[0]) + Math.abs(rgb1[1] - rgb2[1]) + Math.abs(rgb1[2] - rgb2[2])
 };
-// Input 152
-goog.provide("goog.ui.MenuHeaderRenderer");
-goog.require("goog.dom");
-goog.require("goog.dom.classes");
-goog.require("goog.ui.ControlRenderer");
-goog.ui.MenuHeaderRenderer = function() {
-  goog.ui.ControlRenderer.call(this)
-};
-goog.inherits(goog.ui.MenuHeaderRenderer, goog.ui.ControlRenderer);
-goog.addSingletonGetter(goog.ui.MenuHeaderRenderer);
-goog.ui.MenuHeaderRenderer.CSS_CLASS = goog.getCssName("goog-menuheader");
-goog.ui.MenuHeaderRenderer.prototype.getCssClass = function() {
-  return goog.ui.MenuHeaderRenderer.CSS_CLASS
-};
-// Input 153
-goog.provide("goog.ui.MenuHeader");
-goog.require("goog.ui.Component.State");
-goog.require("goog.ui.Control");
-goog.require("goog.ui.MenuHeaderRenderer");
-goog.require("goog.ui.registry");
-goog.ui.MenuHeader = function(content, opt_domHelper, opt_renderer) {
-  goog.ui.Control.call(this, content, opt_renderer || goog.ui.MenuHeaderRenderer.getInstance(), opt_domHelper);
-  this.setSupportedState(goog.ui.Component.State.DISABLED, false);
-  this.setSupportedState(goog.ui.Component.State.HOVER, false);
-  this.setSupportedState(goog.ui.Component.State.ACTIVE, false);
-  this.setSupportedState(goog.ui.Component.State.FOCUSED, false);
-  this.setStateInternal(goog.ui.Component.State.DISABLED)
-};
-goog.inherits(goog.ui.MenuHeader, goog.ui.Control);
-goog.ui.registry.setDecoratorByClassName(goog.ui.MenuHeaderRenderer.CSS_CLASS, function() {
-  return new goog.ui.MenuHeader(null)
-});
-// Input 154
+// Input 151
 goog.provide("goog.ui.MenuRenderer");
 goog.require("goog.dom");
 goog.require("goog.dom.a11y");
@@ -15829,7 +15938,7 @@ goog.ui.MenuRenderer.prototype.initializeDom = function(container) {
   var element = container.getElement();
   goog.dom.a11y.setState(element, goog.dom.a11y.State.HASPOPUP, "true")
 };
-// Input 155
+// Input 152
 goog.provide("goog.ui.MenuSeparator");
 goog.require("goog.ui.MenuSeparatorRenderer");
 goog.require("goog.ui.Separator");
@@ -15841,7 +15950,7 @@ goog.inherits(goog.ui.MenuSeparator, goog.ui.Separator);
 goog.ui.registry.setDecoratorByClassName(goog.ui.MenuSeparatorRenderer.CSS_CLASS, function() {
   return new goog.ui.Separator
 });
-// Input 156
+// Input 153
 goog.provide("goog.ui.Menu");
 goog.provide("goog.ui.Menu.EventType");
 goog.require("goog.string");
@@ -15850,7 +15959,6 @@ goog.require("goog.ui.Component.EventType");
 goog.require("goog.ui.Component.State");
 goog.require("goog.ui.Container");
 goog.require("goog.ui.Container.Orientation");
-goog.require("goog.ui.MenuHeader");
 goog.require("goog.ui.MenuItem");
 goog.require("goog.ui.MenuRenderer");
 goog.require("goog.ui.MenuSeparator");
@@ -15962,18 +16070,7 @@ goog.ui.Menu.prototype.highlightNextPrefix = function(charStr) {
 goog.ui.Menu.prototype.canHighlightItem = function(item) {
   return(this.allowHighlightDisabled_ || item.isEnabled()) && item.isVisible() && item.isSupportedState(goog.ui.Component.State.HOVER)
 };
-goog.ui.Menu.prototype.decorateInternal = function(element) {
-  this.decorateContent(element);
-  goog.ui.Menu.superClass_.decorateInternal.call(this, element)
-};
-goog.ui.Menu.prototype.decorateContent = function(element) {
-  var renderer = this.getRenderer();
-  var contentElements = this.getDomHelper().getElementsByTagNameAndClass("div", goog.getCssName(renderer.getCssClass(), "content"), element);
-  for(var el, i = 0;el = contentElements[i];i++) {
-    renderer.decorateChildren(this, el)
-  }
-};
-// Input 157
+// Input 154
 goog.provide("goog.ui.MenuButtonRenderer");
 goog.require("goog.dom");
 goog.require("goog.style");
@@ -16027,7 +16124,7 @@ goog.ui.MenuButtonRenderer.prototype.createDropdown = function(dom) {
 goog.ui.MenuButtonRenderer.prototype.getCssClass = function() {
   return goog.ui.MenuButtonRenderer.CSS_CLASS
 };
-// Input 158
+// Input 155
 goog.provide("goog.ui.ColorMenuButtonRenderer");
 goog.require("goog.color");
 goog.require("goog.dom.classes");
@@ -16039,12 +16136,12 @@ goog.ui.ColorMenuButtonRenderer = function() {
 };
 goog.inherits(goog.ui.ColorMenuButtonRenderer, goog.ui.MenuButtonRenderer);
 goog.addSingletonGetter(goog.ui.ColorMenuButtonRenderer);
-goog.ui.ColorMenuButtonRenderer.CSS_CLASS = goog.getCssName("goog-color-menu-button");
+goog.ui.ColorMenuButtonRenderer.CSS_CLASS = "goog-color-menu-button";
 goog.ui.ColorMenuButtonRenderer.prototype.createCaption = function(content, dom) {
   return goog.ui.ColorMenuButtonRenderer.superClass_.createCaption.call(this, goog.ui.ColorMenuButtonRenderer.wrapCaption(content, dom), dom)
 };
 goog.ui.ColorMenuButtonRenderer.wrapCaption = function(content, dom) {
-  return dom.createDom("div", goog.getCssName(goog.ui.ColorMenuButtonRenderer.CSS_CLASS, "indicator"), content)
+  return dom.createDom("div", goog.ui.ColorMenuButtonRenderer.CSS_CLASS + "-indicator", content)
 };
 goog.ui.ColorMenuButtonRenderer.prototype.setValue = function(element, value) {
   if(element) {
@@ -16066,7 +16163,7 @@ goog.ui.ColorMenuButtonRenderer.prototype.initializeDom = function(button) {
   goog.dom.classes.add(button.getElement(), goog.ui.ColorMenuButtonRenderer.CSS_CLASS);
   goog.ui.ColorMenuButtonRenderer.superClass_.initializeDom.call(this, button)
 };
-// Input 159
+// Input 156
 goog.provide("goog.ui.PaletteRenderer");
 goog.require("goog.array");
 goog.require("goog.dom");
@@ -16181,7 +16278,7 @@ goog.ui.PaletteRenderer.prototype.selectCell = function(palette, node, select) {
 goog.ui.PaletteRenderer.prototype.getCssClass = function() {
   return goog.ui.PaletteRenderer.CSS_CLASS
 };
-// Input 160
+// Input 157
 goog.provide("goog.ui.SelectionModel");
 goog.require("goog.array");
 goog.require("goog.events.EventTarget");
@@ -16279,7 +16376,7 @@ goog.ui.SelectionModel.prototype.selectItem_ = function(item, select) {
     }
   }
 };
-// Input 161
+// Input 158
 goog.provide("goog.ui.Palette");
 goog.require("goog.array");
 goog.require("goog.dom");
@@ -16481,7 +16578,7 @@ goog.ui.Palette.prototype.adjustSize_ = function() {
     this.size_ = new goog.math.Size(0, 0)
   }
 };
-// Input 162
+// Input 159
 goog.provide("goog.ui.ColorPalette");
 goog.require("goog.array");
 goog.require("goog.color");
@@ -16536,7 +16633,7 @@ goog.ui.ColorPalette.parseColor_ = function(color) {
     }
   }return null
 };
-// Input 163
+// Input 160
 goog.provide("goog.positioning");
 goog.provide("goog.positioning.Corner");
 goog.provide("goog.positioning.CornerBit");
@@ -16661,7 +16758,7 @@ goog.positioning.flipCornerVertical = function(corner) {
 goog.positioning.flipCorner = function(corner) {
   return corner ^ goog.positioning.CornerBit.BOTTOM ^ goog.positioning.CornerBit.RIGHT
 };
-// Input 164
+// Input 161
 goog.provide("goog.positioning.AbstractPosition");
 goog.require("goog.math.Box");
 goog.require("goog.math.Size");
@@ -16670,7 +16767,7 @@ goog.positioning.AbstractPosition = function() {
 };
 goog.positioning.AbstractPosition.prototype.reposition = function(movableElement, corner, opt_margin, opt_preferredSize) {
 };
-// Input 165
+// Input 162
 goog.provide("goog.positioning.AnchoredPosition");
 goog.require("goog.math.Box");
 goog.require("goog.positioning");
@@ -16680,10 +16777,10 @@ goog.positioning.AnchoredPosition = function(anchorElement, corner) {
   this.corner = corner
 };
 goog.inherits(goog.positioning.AnchoredPosition, goog.positioning.AbstractPosition);
-goog.positioning.AnchoredPosition.prototype.reposition = function(movableElement, movableCorner, opt_margin, opt_preferredSize) {
+goog.positioning.AnchoredPosition.prototype.reposition = function(movableElement, movableCorner, opt_margin) {
   goog.positioning.positionAtAnchor(this.element, this.corner, movableElement, movableCorner, undefined, opt_margin)
 };
-// Input 166
+// Input 163
 goog.provide("goog.positioning.AnchoredViewportPosition");
 goog.require("goog.math.Box");
 goog.require("goog.positioning");
@@ -16717,7 +16814,7 @@ goog.positioning.AnchoredViewportPosition.prototype.reposition = function(movabl
     }
   }
 };
-// Input 167
+// Input 164
 goog.provide("goog.positioning.MenuAnchoredPosition");
 goog.require("goog.math.Box");
 goog.require("goog.math.Size");
@@ -16737,7 +16834,7 @@ goog.positioning.MenuAnchoredPosition.prototype.reposition = function(movableEle
     goog.positioning.MenuAnchoredPosition.superClass_.reposition.call(this, movableElement, movableCorner, opt_margin, opt_preferredSize)
   }
 };
-// Input 168
+// Input 165
 goog.provide("goog.ui.MenuButton");
 goog.require("goog.Timer");
 goog.require("goog.dom");
@@ -16767,7 +16864,6 @@ goog.ui.MenuButton = function(content, opt_menu, opt_renderer, opt_domHelper) {
 };
 goog.inherits(goog.ui.MenuButton, goog.ui.Button);
 goog.ui.MenuButton.prototype.menu_;
-goog.ui.MenuButton.prototype.positionElement_;
 goog.ui.MenuButton.prototype.alignToStart_ = true;
 goog.ui.MenuButton.prototype.scrollOnOverflow_ = false;
 goog.ui.MenuButton.prototype.isFocusablePopupMenu_ = false;
@@ -16798,8 +16894,7 @@ goog.ui.MenuButton.prototype.disposeInternal = function() {
   if(this.menu_) {
     this.menu_.dispose();
     delete this.menu_
-  }delete this.positionElement_;
-  this.timer_.dispose()
+  }this.timer_.dispose()
 };
 goog.ui.MenuButton.prototype.handleMouseDown = function(e) {
   goog.ui.MenuButton.superClass_.handleMouseDown.call(this, e);
@@ -16829,15 +16924,9 @@ goog.ui.MenuButton.prototype.containsElement = function(element) {
   return element && goog.dom.contains(this.getElement(), element) || this.menu_ && this.menu_.containsElement(element) || false
 };
 goog.ui.MenuButton.prototype.handleKeyEventInternal = function(e) {
-  if(e.keyCode == goog.events.KeyCodes.SPACE) {
-    e.preventDefault();
-    if(e.type != goog.events.EventType.KEYUP) {
-      return false
-    }
-  }else {
-    if(e.type != goog.events.KeyHandler.EventType.KEY) {
-      return false
-    }
+  var eventType = e.keyCode == goog.events.KeyCodes.SPACE ? goog.events.EventType.KEYUP : goog.events.KeyHandler.EventType.KEY;
+  if(e.type != eventType) {
+    return false
   }if(this.menu_ && this.menu_.isVisible()) {
     var handledByMenu = this.menu_.handleKeyEvent(e);
     if(e.keyCode == goog.events.KeyCodes.ESC) {
@@ -16885,10 +16974,6 @@ goog.ui.MenuButton.prototype.setMenu = function(menu) {
       }
     }
   }return oldMenu
-};
-goog.ui.MenuButton.prototype.setPositionElement = function(positionElement) {
-  this.positionElement_ = positionElement;
-  this.positionMenu()
 };
 goog.ui.MenuButton.prototype.addItem = function(item) {
   this.getMenu().addChild(item, true)
@@ -16975,11 +17060,8 @@ goog.ui.MenuButton.prototype.setOpen = function(open) {
   }
 };
 goog.ui.MenuButton.prototype.positionMenu = function() {
-  if(!this.menu_.isInDocument()) {
-    return
-  }var positionElement = this.positionElement_ || this.getElement();
   var anchorCorner = this.isAlignMenuToStart() ? goog.positioning.Corner.BOTTOM_START : goog.positioning.Corner.BOTTOM_END;
-  var position = new goog.positioning.MenuAnchoredPosition(positionElement, anchorCorner, !this.scrollOnOverflow_, this.scrollOnOverflow_);
+  var position = new goog.positioning.MenuAnchoredPosition(this.getElement(), anchorCorner, !this.scrollOnOverflow_, this.scrollOnOverflow_);
   var elem = this.menu_.getElement();
   if(!this.menu_.isVisible()) {
     elem.style.visibility = "hidden";
@@ -17033,7 +17115,7 @@ goog.ui.MenuButton.prototype.attachPopupListeners_ = function(attach) {
 goog.ui.registry.setDecoratorByClassName(goog.ui.MenuButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.MenuButton(null)
 });
-// Input 169
+// Input 166
 goog.provide("goog.ui.ColorMenuButton");
 goog.require("goog.array");
 goog.require("goog.object");
@@ -17097,7 +17179,7 @@ goog.ui.ColorMenuButton.prototype.setOpen = function(open) {
 goog.ui.registry.setDecoratorByClassName(goog.ui.ColorMenuButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.ColorMenuButton(null)
 });
-// Input 170
+// Input 167
 goog.provide("goog.ui.ToolbarMenuButtonRenderer");
 goog.require("goog.ui.MenuButtonRenderer");
 goog.ui.ToolbarMenuButtonRenderer = function() {
@@ -17105,11 +17187,11 @@ goog.ui.ToolbarMenuButtonRenderer = function() {
 };
 goog.inherits(goog.ui.ToolbarMenuButtonRenderer, goog.ui.MenuButtonRenderer);
 goog.addSingletonGetter(goog.ui.ToolbarMenuButtonRenderer);
-goog.ui.ToolbarMenuButtonRenderer.CSS_CLASS = goog.getCssName("goog-toolbar-menu-button");
+goog.ui.ToolbarMenuButtonRenderer.CSS_CLASS = "goog-toolbar-menu-button";
 goog.ui.ToolbarMenuButtonRenderer.prototype.getCssClass = function() {
   return goog.ui.ToolbarMenuButtonRenderer.CSS_CLASS
 };
-// Input 171
+// Input 168
 goog.provide("goog.ui.ToolbarColorMenuButtonRenderer");
 goog.require("goog.dom.classes");
 goog.require("goog.ui.ColorMenuButtonRenderer");
@@ -17131,10 +17213,10 @@ goog.ui.ToolbarColorMenuButtonRenderer.prototype.setValue = function(element, va
 };
 goog.ui.ToolbarColorMenuButtonRenderer.prototype.initializeDom = function(button) {
   this.setValue(button.getElement(), button.getValue());
-  goog.dom.classes.add(button.getElement(), goog.getCssName("goog-toolbar-color-menu-button"));
+  goog.dom.classes.add(button.getElement(), "goog-toolbar-color-menu-button");
   goog.ui.ToolbarColorMenuButtonRenderer.superClass_.initializeDom.call(this, button)
 };
-// Input 172
+// Input 169
 goog.provide("goog.ui.ToolbarColorMenuButton");
 goog.require("goog.ui.ColorMenuButton");
 goog.require("goog.ui.ControlContent");
@@ -17144,10 +17226,10 @@ goog.ui.ToolbarColorMenuButton = function(content, opt_menu, opt_renderer, opt_d
   goog.ui.ColorMenuButton.call(this, content, opt_menu, opt_renderer || goog.ui.ToolbarColorMenuButtonRenderer.getInstance(), opt_domHelper)
 };
 goog.inherits(goog.ui.ToolbarColorMenuButton, goog.ui.ColorMenuButton);
-goog.ui.registry.setDecoratorByClassName(goog.getCssName("goog-toolbar-color-menu-button"), function() {
+goog.ui.registry.setDecoratorByClassName("goog-toolbar-color-menu-button", function() {
   return new goog.ui.ToolbarColorMenuButton(null)
 });
-// Input 173
+// Input 170
 goog.provide("goog.ui.ToolbarMenuButton");
 goog.require("goog.ui.ControlContent");
 goog.require("goog.ui.MenuButton");
@@ -17160,7 +17242,7 @@ goog.inherits(goog.ui.ToolbarMenuButton, goog.ui.MenuButton);
 goog.ui.registry.setDecoratorByClassName(goog.ui.ToolbarMenuButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.ToolbarMenuButton(null)
 });
-// Input 174
+// Input 171
 goog.provide("goog.ui.Select");
 goog.require("goog.events.EventType");
 goog.require("goog.ui.Component.EventType");
@@ -17307,7 +17389,7 @@ goog.ui.Select.prototype.setOpen = function(open) {
 goog.ui.registry.setDecoratorByClassName(goog.getCssName("goog-select"), function() {
   return new goog.ui.Select(null)
 });
-// Input 175
+// Input 172
 goog.provide("goog.ui.ToolbarSelect");
 goog.require("goog.ui.ControlContent");
 goog.require("goog.ui.Select");
@@ -17317,10 +17399,10 @@ goog.ui.ToolbarSelect = function(caption, opt_menu, opt_renderer, opt_domHelper)
   goog.ui.Select.call(this, caption, opt_menu, opt_renderer || goog.ui.ToolbarMenuButtonRenderer.getInstance(), opt_domHelper)
 };
 goog.inherits(goog.ui.ToolbarSelect, goog.ui.Select);
-goog.ui.registry.setDecoratorByClassName(goog.getCssName("goog-toolbar-select"), function() {
+goog.ui.registry.setDecoratorByClassName("goog-toolbar-select", function() {
   return new goog.ui.ToolbarSelect(null)
 });
-// Input 176
+// Input 173
 goog.provide("goog.ui.LabelInput");
 goog.require("goog.Timer");
 goog.require("goog.dom");
@@ -17336,7 +17418,6 @@ goog.ui.LabelInput = function(opt_label, opt_domHelper) {
 goog.inherits(goog.ui.LabelInput, goog.ui.Component);
 goog.ui.LabelInput.prototype.ffKeyRestoreValue_ = null;
 goog.ui.LabelInput.prototype.eventHandler_;
-goog.ui.LabelInput.prototype.hasFocus_;
 goog.ui.LabelInput.prototype.createDom = function() {
   this.setElementInternal(this.getDomHelper().createDom("input", {type:"text"}))
 };
@@ -17385,7 +17466,7 @@ goog.ui.LabelInput.prototype.disposeInternal = function() {
   goog.ui.LabelInput.superClass_.disposeInternal.call(this);
   this.detachEvents_()
 };
-goog.ui.LabelInput.prototype.LABEL_CLASS_NAME = goog.getCssName("label-input-label");
+goog.ui.LabelInput.prototype.LABEL_CLASS_NAME = "label-input-label";
 goog.ui.LabelInput.prototype.handleFocus_ = function(e) {
   this.hasFocus_ = true;
   goog.dom.classes.remove(this.getElement(), this.LABEL_CLASS_NAME);
@@ -17435,9 +17516,6 @@ goog.ui.LabelInput.prototype.handleAfterSubmit_ = function(e) {
 goog.ui.LabelInput.prototype.handleWindowLoad_ = function(e) {
   this.check_()
 };
-goog.ui.LabelInput.prototype.hasFocus = function() {
-  return this.hasFocus_
-};
 goog.ui.LabelInput.prototype.hasChanged = function() {
   return this.getElement().value != "" && this.getElement().value != this.label_
 };
@@ -17477,10 +17555,6 @@ goog.ui.LabelInput.prototype.focusAndSelect = function() {
   }this.getElement().select();
   goog.Timer.callOnce(this.focusAndSelect_, 10, this)
 };
-goog.ui.LabelInput.prototype.setEnabled = function(enabled) {
-  this.getElement().disabled = !enabled;
-  goog.dom.classes.enable(this.getElement(), goog.getCssName(this.LABEL_CLASS_NAME, "disabled"), !enabled)
-};
 goog.ui.LabelInput.prototype.focusAndSelect_ = function() {
   this.inFocusAndSelect_ = false
 };
@@ -17489,7 +17563,7 @@ goog.ui.LabelInput.prototype.restoreLabel_ = function() {
     this.getElement().value = this.label_
   }
 };
-// Input 177
+// Input 174
 goog.provide("kemia.controller.ToolbarFactory");
 goog.require("goog.array");
 goog.require("goog.dom");
@@ -17560,10 +17634,10 @@ kemia.controller.ToolbarFactory.createContent_ = function(caption, opt_className
     caption = goog.string.Unicode.NBSP
   }return(opt_domHelper || goog.dom.getDomHelper()).createDom(goog.dom.TagName.DIV, opt_classNames ? {"class":opt_classNames} : null, caption)
 };
-// Input 178
+// Input 175
 goog.provide("kemia.controller.Command");
 kemia.controller.Command = {};
-// Input 179
+// Input 176
 goog.provide("kemia.controller.plugins.Move");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -17954,7 +18028,7 @@ kemia.controller.plugins.Move.prototype.rotateMolecule = function(e, molecule) {
   d.startDrag(e)
 };
 kemia.controller.plugins.Move.prototype.logger = goog.debug.Logger.getLogger("kemia.controller.plugins.Move");
-// Input 180
+// Input 177
 goog.provide("kemia.controller.plugins.Erase");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -18108,7 +18182,7 @@ kemia.controller.plugins.Erase.prototype.highlightPlus = function(plus, opt_grou
 kemia.controller.plugins.Erase.prototype.highlightMolecule = function(molecule, opt_group) {
   return this.editorObject.reactionRenderer.moleculeRenderer.highlightOn(molecule, "#ff6666", opt_group)
 };
-// Input 181
+// Input 178
 goog.provide("kemia.controller.plugins.ClearEditor");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.functions");
@@ -18131,7 +18205,7 @@ kemia.controller.plugins.ClearEditor.prototype.execCommandInternal = function(co
   }
 };
 kemia.controller.plugins.ClearEditor.prototype.isSilentCommand = goog.functions.FALSE;
-// Input 182
+// Input 179
 goog.provide("kemia.controller.plugins.Zoom");
 goog.require("goog.debug.Logger");
 kemia.controller.plugins.Zoom = function() {
@@ -18160,7 +18234,7 @@ kemia.controller.plugins.Zoom.prototype.execCommand = function(command, var_args
   }
 };
 kemia.controller.plugins.Zoom.prototype.logger = goog.debug.Logger.getLogger("kemia.controller.plugins.Zoom");
-// Input 183
+// Input 180
 goog.provide("kemia.controller.plugins.BondEdit");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -18382,7 +18456,7 @@ kemia.controller.plugins.BondEdit.prototype.queryCommandValue = function(command
     return this.bond_type
   }
 };
-// Input 184
+// Input 181
 goog.provide("kemia.controller.plugins.AtomEdit");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -18471,18 +18545,27 @@ kemia.controller.plugins.AtomEdit.prototype.handleMouseDown = function(e) {
   if(this.symbol) {
     var selected = this.editorObject.getSelected();
     if(selected.length) {
-      goog.array.forEach(selected, function(target) {
-        if(target instanceof kemia.model.Atom) {
-          var atom = target;
-          if(this.symbol && this.symbol != atom.symbol) {
-            this.editorObject.dispatchBeforeChange();
-            this.setAtomSymbol(this.symbol, atom);
-            this.editorObject.setModels(this.editorObject.getModels());
-            this.editorObject.dispatchChange();
-            return true
+      if(selected.length == 1 && e.shiftKey) {
+        var existingAtom = selected[0];
+        var molecule = existingAtom.molecule;
+        molecule.sproutBond(existingAtom, kemia.model.Bond.ORDER.SINGLE, kemia.model.Bond.STEREO.NOT_STEREO, this.symbol);
+        this.editorObject.setModels(this.editorObject.getModels());
+        this.editorObject.dispatchChange();
+        return true
+      }else {
+        goog.array.forEach(selected, function(target) {
+          if(target instanceof kemia.model.Atom) {
+            var atom = target;
+            if(this.symbol && this.symbol != atom.symbol) {
+              this.editorObject.dispatchBeforeChange();
+              this.setAtomSymbol(this.symbol, atom);
+              this.editorObject.setModels(this.editorObject.getModels());
+              this.editorObject.dispatchChange();
+              return true
+            }
           }
-        }
-      }, this)
+        }, this)
+      }
     }else {
       this.createMolecule(kemia.controller.ReactionEditor.getMouseCoords(e));
       this.editorObject.setModels(this.editorObject.getModels());
@@ -18523,7 +18606,7 @@ kemia.controller.plugins.AtomEdit.prototype.queryCommandValue = function(command
     return this.symbol
   }
 };
-// Input 185
+// Input 182
 goog.provide("goog.date");
 goog.provide("goog.date.Date");
 goog.provide("goog.date.DateTime");
@@ -18952,10 +19035,6 @@ goog.date.DateTime = function(opt_year, opt_month, opt_date, opt_hours, opt_minu
   }
 };
 goog.inherits(goog.date.DateTime, goog.date.Date);
-goog.date.DateTime.fromRfc822String = function(formatted) {
-  var date = new Date(formatted);
-  return!isNaN(date.getTime()) ? new goog.date.DateTime(date) : null
-};
 goog.date.DateTime.prototype.getHours = function() {
   return this.date_.getHours()
 };
@@ -19071,7 +19150,7 @@ goog.date.DateTime.prototype.clone = function() {
   date.setFirstWeekCutOffDay(this.getFirstWeekCutOffDay());
   return date
 };
-// Input 186
+// Input 183
 goog.provide("kemia.controller.plugins.UndoRedo");
 goog.require("goog.debug.Logger");
 goog.require("goog.json");
@@ -19222,7 +19301,7 @@ kemia.controller.plugins.UndoRedo.prototype.queryCommandValue = function(command
     }
   }return state
 };
-// Input 187
+// Input 184
 goog.provide("kemia.controller.plugins.ArrowPlusEdit");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -19273,7 +19352,7 @@ kemia.controller.plugins.ArrowPlusEdit.prototype.queryCommandValue = function(co
     state = this.activeCommand[command]
   }return state
 };
-// Input 188
+// Input 185
 goog.provide("kemia.controller.plugins.MoleculeEdit");
 goog.require("kemia.controller.Plugin");
 goog.require("goog.debug.Logger");
@@ -19547,7 +19626,7 @@ y:0, z:0}, charge:0}, {symbol:"C", coord:{x:3.8971, y:3, z:0}, charge:0}, {symbo
 target:5, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:5, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:6, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:6, target:7, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:7, target:8, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:8, target:9, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:9, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}, {name:"cyclobutane", atoms:[{symbol:"C", coord:{x:0, y:0}, charge:null}, 
 {symbol:"C", coord:{x:0, y:1.5}, charge:null}, {symbol:"C", coord:{x:-1.5, y:1.5000000000000002}, charge:null}, {symbol:"C", coord:{x:-1.5000000000000002, y:1.1102230246251565E-16}, charge:null}], bondindex:[{source:0, target:1, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:2, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:2, target:3, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:3, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}, {name:"cyclopropane", atoms:[{symbol:"C", 
 coord:{x:0, y:0}, charge:null}, {symbol:"C", coord:{x:0, y:1.5}, charge:null}, {symbol:"C", coord:{x:-1.2990381056766582, y:0.7500000000000001}, charge:null}], bondindex:[{source:0, target:1, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:2, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:2, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}];
-// Input 189
+// Input 186
 goog.provide("kemia.layout.Vector2D");
 kemia.layout.Vector2D = function(x, y) {
   if(arguments.length > 0) {
@@ -19648,7 +19727,7 @@ kemia.layout.Vector2D.prototype.angle = function(v1) {
     vDot = 1
   }return Math.acos(vDot)
 };
-// Input 190
+// Input 187
 goog.provide("kemia.layout.ConnectionMatrix");
 kemia.layout.ConnectionMatrix = function() {
 };
@@ -19684,7 +19763,7 @@ kemia.layout.ConnectionMatrix.display = function(matrix) {
     }debug += "\n"
   }alert(debug)
 };
-// Input 191
+// Input 188
 goog.provide("kemia.layout.AtomPlacer");
 goog.require("kemia.layout.ConnectionMatrix");
 goog.require("kemia.layout.Vector2D");
@@ -20061,7 +20140,7 @@ kemia.layout.AtomPlacer.markPlaced = function(atoms) {
     atom.setFlag(kemia.model.Flags.ISPLACED, true)
   })
 };
-// Input 192
+// Input 189
 goog.provide("kemia.layout.RingPlacer");
 goog.require("kemia.layout.Vector2D");
 goog.require("goog.math.Coordinate");
@@ -20138,13 +20217,10 @@ kemia.layout.RingPlacer.placeBridgedRing = function(ring, shared_fragment, share
   kemia.layout.AtomPlacer.populatePolygonCorners(atoms_to_place, ringCenter, startAngle, addAngle, radius)
 };
 kemia.layout.RingPlacer.atomsInPlacementOrder = function(atom, bond, bonds) {
-  var other_bonds = goog.array.filter(bonds, function(b) {
-    return b !== bond
-  });
-  var next_bond = goog.array.find(other_bonds, function(b) {
+  var next_bond = goog.array.find(bonds, function(b) {
     return b.otherAtom(atom)
   });
-  var remaining_bonds = goog.array.filter(other_bonds, function(b) {
+  var remaining_bonds = goog.array.filter(bonds, function(b) {
     return b !== next_bond
   });
   if(remaining_bonds.length > 0) {
@@ -20256,7 +20332,7 @@ kemia.layout.RingPlacer.placeSpiroRing = function(ring, shared_fragment, sharedA
   var ringCenter = new goog.math.Coordinate(sharedAtomsCenter.x + ringCenterVector.x, sharedAtomsCenter.y + ringCenterVector.y);
   var addAngle = 2 * Math.PI / ring.atoms.length;
   var startAtom = shared_fragment.atoms[0];
-  var startAngle = (new kemia.layout.Vector2D(startAtom.coord.x, startAtom.coord.y)).angle(ringCenterVector);
+  var startAngle = kemia.layout.AtomPlacer.getAngle(startAtom.coord.x - ringCenter.x, startAtom.coord.y - ringCenter.y);
   var atoms_to_place = kemia.layout.RingPlacer.atomsInPlacementOrder(startAtom, shared_fragment.bonds[0], ring.bonds);
   kemia.layout.AtomPlacer.populatePolygonCorners(atoms_to_place, ringCenter, startAngle, addAngle, radius)
 };
@@ -20381,7 +20457,7 @@ kemia.layout.RingPlacer.layoutNextRingSystem = function(firstBondVector, molecul
     })
   }
 };
-// Input 193
+// Input 190
 goog.provide("kemia.ring.RingPartitioner");
 goog.require("goog.array");
 kemia.ring.RingPartitioner.getPartitionedRings = function(rings) {
@@ -20433,7 +20509,7 @@ kemia.ring.RingPartitioner.directConnectedRings = function(ring, rings) {
     }
   }return result
 };
-// Input 194
+// Input 191
 goog.provide("kemia.layout.OverlapResolver");
 goog.require("kemia.layout.Vector2D");
 kemia.layout.OverlapResolver.resolveOverlap = function(molecule, sssr) {
@@ -20445,7 +20521,7 @@ kemia.layout.OverlapResolver.resolveOverlap = function(molecule, sssr) {
 };
 kemia.layout.OverlapResolver.getOverlapScore = function(molecule, overlappingAtoms) {
   overlapScore = 0;
-  overlapCutoff = 1;
+  overlapCutoff = kemia.layout.CoordinateGenerator.BOND_LENGTH / 5;
   atCount = molecule.countAtoms();
   for(f = 0;f < atCount;f++) {
     var atom1 = molecule.getAtom(f);
@@ -20462,7 +20538,7 @@ kemia.layout.OverlapResolver.getOverlapScore = function(molecule, overlappingAto
   }return overlapScore
 };
 kemia.layout.OverlapResolver.displace = function(molecule, overlappingAtoms) {
-  var maxSteps = 1E4;
+  var maxSteps = 25;
   var steps = 0;
   do {
     p = Math.round(Math.random() * overlappingAtoms.length);
@@ -20479,7 +20555,7 @@ kemia.layout.OverlapResolver.displace = function(molecule, overlappingAtoms) {
         v2.x = 0.01
       }if(isNaN(v2.y)) {
         v2.y = 0.01
-      }v2.scale(kemia.layout.CoordinateGenerator.BOND_LENGTH / 20);
+      }v2.scale(-1 * kemia.layout.CoordinateGenerator.BOND_LENGTH / 3);
       choice = Math.random();
       if(choice > 0.5) {
         a2.coord.x += v2.x;
@@ -20495,7 +20571,7 @@ kemia.layout.OverlapResolver.displace = function(molecule, overlappingAtoms) {
   }while(overlapScore > 0 && !(steps > maxSteps));
   return overlapScore
 };
-// Input 195
+// Input 192
 goog.provide("kemia.layout.CoordinateGenerator");
 goog.require("kemia.layout.Vector2D");
 goog.require("kemia.layout.AtomPlacer");
@@ -20552,25 +20628,12 @@ kemia.layout.CoordinateGenerator.generate = function(molecule) {
     this.handleAliphatics(molecule, nrOfEdges, kemia.layout.CoordinateGenerator.BOND_LENGTH);
     kemia.layout.RingPlacer.layoutNextRingSystem(firstBondVector, molecule, sssr, ringsets)
   }while(!kemia.layout.AtomPlacer.allPlaced(molecule, atCount) && safetyCounter <= molecule.countAtoms());
+  kemia.layout.OverlapResolver.resolveOverlap(molecule, sssr);
   return molecule
 };
 kemia.layout.CoordinateGenerator.layoutRingSet = function(bondVector, ringset) {
   var bl = kemia.layout.CoordinateGenerator.BOND_LENGTH;
-  var complexity = function(ring) {
-    var others = goog.array.filter(ringset, function(r) {
-      return goog.array.contains(ringset, r)
-    });
-    goog.array.reduce(others, function(r, val) {
-      var common_atoms = goog.array.filter(val.atoms, function(atom) {
-        goog.array.contains(ring.atoms, atom)
-      });
-      return r + common_atoms.length
-    }, 0)
-  };
-  goog.array.sort(ringset, function(a, b) {
-    goog.array.defaultCompare(complexity(a), complexity(b))
-  });
-  var most_complex_ring = goog.array.peek(ringset);
+  var most_complex_ring = this.getMostComplexRing(ringset);
   if(!most_complex_ring.flags[kemia.model.Flags.ISPLACED]) {
     var shared_fragment = {atoms:this.placeFirstBond(most_complex_ring.bonds[0], bondVector), bonds:[most_complex_ring.bonds[0]]};
     var shared_fragment_sum = goog.array.reduce(shared_fragment.atoms, function(r, atom) {
@@ -20664,7 +20727,38 @@ kemia.layout.CoordinateGenerator.handleAliphatics = function(molecule, bondCount
     }
   }while(!done && cntr <= molecule.countAtoms())
 };
-// Input 196
+kemia.layout.CoordinateGenerator.getMostComplexRing = function(ringSet) {
+  var neighbors = new Array(ringSet.length);
+  for(i = 0;i < neighbors.length;i++) {
+    neighbors[i] = 0
+  }var mostComplex = 0;
+  var mostComplexPosition = 0;
+  for(i = 0;i < ringSet.length;i++) {
+    ring1 = ringSet[i];
+    for(j = 0;j < ring1.atoms.length;j++) {
+      atom1 = ring1[j];
+      for(k = i + 1;k < ringSet.length;k++) {
+        ring2 = ringSet[k];
+        if(ring1 != ring2) {
+          for(l = 0;l < ring2.atoms.length;l++) {
+            atom2 = ring2[l];
+            if(atom1 == atom2) {
+              neighbors[i]++;
+              neighbors[k]++;
+              break
+            }
+          }
+        }
+      }
+    }
+  }for(i = 0;i < neighbors.length;i++) {
+    if(neighbors[i] > mostComplex) {
+      mostComplex = neighbors[i];
+      mostComplexPosition = i
+    }
+  }return ringSet[mostComplexPosition]
+};
+// Input 193
 goog.provide("kemia.controller.plugins.Cleanup");
 goog.require("goog.debug.Logger");
 goog.require("kemia.layout.CoordinateGenerator");
@@ -20704,7 +20798,7 @@ kemia.controller.plugins.Cleanup.prototype.execCommand = function(command, var_a
   }
 };
 kemia.controller.plugins.Cleanup.prototype.logger = goog.debug.Logger.getLogger("kemia.controller.plugins.Cleanup");
-// Input 197
+// Input 194
 goog.provide("goog.ui.FlatButtonRenderer");
 goog.require("goog.dom.classes");
 goog.require("goog.ui.Button");
@@ -20738,7 +20832,7 @@ goog.ui.FlatButtonRenderer.prototype.getCssClass = function() {
 goog.ui.registry.setDecoratorByClassName(goog.ui.FlatButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.Button(null, goog.ui.FlatButtonRenderer.getInstance())
 });
-// Input 198
+// Input 195
 goog.provide("goog.ui.FlatMenuButtonRenderer");
 goog.require("goog.style");
 goog.require("goog.ui.ControlContent");
@@ -20790,7 +20884,7 @@ goog.ui.FlatMenuButtonRenderer.prototype.getCssClass = function() {
 goog.ui.registry.setDecoratorByClassName(goog.ui.FlatMenuButtonRenderer.CSS_CLASS, function() {
   return new goog.ui.MenuButton(null, null, goog.ui.FlatMenuButtonRenderer.getInstance())
 });
-// Input 199
+// Input 196
 goog.provide("kemia.controller.TemplateMenuButtonRenderer");
 goog.require("goog.ui.FlatMenuButtonRenderer");
 kemia.controller.TemplateMenuButtonRenderer = function() {
@@ -20798,7 +20892,7 @@ kemia.controller.TemplateMenuButtonRenderer = function() {
 };
 goog.inherits(kemia.controller.TemplateMenuButtonRenderer, goog.ui.FlatMenuButtonRenderer);
 goog.addSingletonGetter(kemia.controller.TemplateMenuButtonRenderer);
-// Input 200
+// Input 197
 goog.provide("goog.ui.ToolbarSeparator");
 goog.require("goog.ui.Separator");
 goog.require("goog.ui.ToolbarSeparatorRenderer");
@@ -20810,7 +20904,7 @@ goog.inherits(goog.ui.ToolbarSeparator, goog.ui.Separator);
 goog.ui.registry.setDecoratorByClassName(goog.ui.ToolbarSeparatorRenderer.CSS_CLASS, function() {
   return new goog.ui.ToolbarSeparator
 });
-// Input 201
+// Input 198
 goog.provide("kemia.controller.DefaultToolbar");
 goog.require("goog.dom");
 goog.require("goog.dom.TagName");
@@ -21095,7 +21189,7 @@ kemia.controller.DefaultToolbar.BUTTONS_ = [];
     kemia.controller.DefaultToolbar.buttons_[button.command] = button
   }delete kemia.controller.DefaultToolbar.BUTTONS_
 })();
-// Input 202
+// Input 199
 goog.provide("kemia.controller.ToolbarController");
 goog.require("kemia.controller.ReactionEditor.EventType");
 goog.require("goog.events.EventHandler");
@@ -21191,9 +21285,8 @@ kemia.controller.ToolbarController.prototype.handleAction = function(e) {
   }this.editor_.execCommand(command, value, checked, e)
 };
 kemia.controller.ToolbarController.prototype.logger = goog.debug.Logger.getLogger("kemia.controller.ToolbarController");
-// Input 203
+// Input 200
 goog.provide("goog.i18n.DateTimeSymbols");
-goog.provide("goog.i18n.DateTimeSymbols_am");
 goog.provide("goog.i18n.DateTimeSymbols_ar");
 goog.provide("goog.i18n.DateTimeSymbols_bg");
 goog.provide("goog.i18n.DateTimeSymbols_bn");
@@ -21258,7 +21351,6 @@ goog.provide("goog.i18n.DateTimeSymbols_sl");
 goog.provide("goog.i18n.DateTimeSymbols_sq");
 goog.provide("goog.i18n.DateTimeSymbols_sr");
 goog.provide("goog.i18n.DateTimeSymbols_sv");
-goog.provide("goog.i18n.DateTimeSymbols_sw");
 goog.provide("goog.i18n.DateTimeSymbols_ta");
 goog.provide("goog.i18n.DateTimeSymbols_te");
 goog.provide("goog.i18n.DateTimeSymbols_th");
@@ -21275,12 +21367,6 @@ goog.i18n.DateTimeSymbols_en_ISO = {ERAS:["BC", "AD"], ERANAMES:["Before Christ"
 "November", "December"], SHORTMONTHS:["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], STANDALONESHORTMONTHS:["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], WEEKDAYS:["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], STANDALONEWEEKDAYS:["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], SHORTWEEKDAYS:["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], STANDALONESHORTWEEKDAYS:["Sun", 
 "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], NARROWWEEKDAYS:["S", "M", "T", "W", "T", "F", "S"], STANDALONENARROWWEEKDAYS:["S", "M", "T", "W", "T", "F", "S"], SHORTQUARTERS:["Q1", "Q2", "Q3", "Q4"], QUARTERS:["1st quarter", "2nd quarter", "3rd quarter", "4th quarter"], AMPMS:["AM", "PM"], DATEFORMATS:["EEEE, y MMMM dd", "y MMMM d", "y MMM d", "yyyy-MM-dd"], TIMEFORMATS:["HH:mm:ss v", "HH:mm:ss z", "HH:mm:ss", "HH:mm"], AVAILABLEFORMATS:{Md:"M/d", MMMMd:"MMMM d", MMMd:"MMM d"}, FIRSTDAYOFWEEK:0, WEEKENDRANGE:[5, 
 6], FIRSTWEEKCUTOFFDAY:3};
-goog.i18n.DateTimeSymbols_am = {ERAS:["\u12d3/\u12d3", "\u12d3/\u121d"], ERANAMES:["\u12d3/\u12d3", "\u12d3/\u121d"], NARROWMONTHS:["\u1303", "\u134c", "\u121b", "\u12a4", "\u121c", "\u1301", "\u1301", "\u12a6", "\u1234", "\u12a6", "\u1296", "\u12f2"], STANDALONENARROWMONTHS:["\u1303", "\u134c", "\u121b", "\u12a4", "\u121c", "\u1301", "\u1301", "\u12a6", "\u1234", "\u12a6", "\u1296", "\u12f2"], MONTHS:["\u1303\u1295\u12e9\u12c8\u122a", "\u134c\u1265\u1229\u12c8\u122a", "\u121b\u122d\u127d", "\u12a4\u1355\u1228\u120d", 
-"\u121c\u12ed", "\u1301\u1295", "\u1301\u120b\u12ed", "\u12a6\u1308\u1235\u1275", "\u1234\u1355\u1274\u121d\u1260\u122d", "\u12a6\u12ad\u1270\u12cd\u1260\u122d", "\u1296\u126c\u121d\u1260\u122d", "\u12f2\u1234\u121d\u1260\u122d"], STANDALONEMONTHS:["\u1303\u1295\u12e9\u12c8\u122a", "\u134c\u1265\u1229\u12c8\u122a", "\u121b\u122d\u127d", "\u12a4\u1355\u1228\u120d", "\u121c\u12ed", "\u1301\u1295", "\u1301\u120b\u12ed", "\u12a6\u1308\u1235\u1275", "\u1234\u1355\u1274\u121d\u1260\u122d", "\u12a6\u12ad\u1270\u12cd\u1260\u122d", 
-"\u1296\u126c\u121d\u1260\u122d", "\u12f2\u1234\u121d\u1260\u122d"], SHORTMONTHS:["\u1303\u1295\u12e9", "\u134c\u1265\u1229", "\u121b\u122d\u127d", "\u12a4\u1355\u1228", "\u121c\u12ed", "\u1301\u1295", "\u1301\u120b\u12ed", "\u12a6\u1308\u1235", "\u1234\u1355\u1274", "\u12a6\u12ad\u1270", "\u1296\u126c\u121d", "\u12f2\u1234\u121d"], STANDALONESHORTMONTHS:["\u1303\u1295\u12e9", "\u134c\u1265\u1229", "\u121b\u122d\u127d", "\u12a4\u1355\u1228", "\u121c\u12ed", "\u1301\u1295", "\u1301\u120b\u12ed", "\u12a6\u1308\u1235", 
-"\u1234\u1355\u1274", "\u12a6\u12ad\u1270", "\u1296\u126c\u121d", "\u12f2\u1234\u121d"], WEEKDAYS:["\u12a5\u1211\u12f5", "\u1230\u129e", "\u121b\u12ad\u1230\u129e", "\u1228\u1261\u12d5", "\u1210\u1219\u1235", "\u12d3\u122d\u1265", "\u1245\u12f3\u121c"], STANDALONEWEEKDAYS:["\u12a5\u1211\u12f5", "\u1230\u129e", "\u121b\u12ad\u1230\u129e", "\u1228\u1261\u12d5", "\u1210\u1219\u1235", "\u12d3\u122d\u1265", "\u1245\u12f3\u121c"], SHORTWEEKDAYS:["\u12a5\u1211\u12f5", "\u1230\u129e", "\u121b\u12ad\u1230", 
-"\u1228\u1261\u12d5", "\u1210\u1219\u1235", "\u12d3\u122d\u1265", "\u1245\u12f3\u121c"], STANDALONESHORTWEEKDAYS:["\u12a5\u1211\u12f5", "\u1230\u129e", "\u121b\u12ad\u1230", "\u1228\u1261\u12d5", "\u1210\u1219\u1235", "\u12d3\u122d\u1265", "\u1245\u12f3\u121c"], NARROWWEEKDAYS:["\u12a5", "\u1230", "\u121b", "\u1228", "\u1210", "\u12d3", "\u1245"], STANDALONENARROWWEEKDAYS:["\u12a5", "\u1230", "\u121b", "\u1228", "\u1210", "\u12d3", "\u1245"], SHORTQUARTERS:["Q1", "Q2", "Q3", "Q4"], QUARTERS:["Q1", 
-"Q2", "Q3", "Q4"], AMPMS:["\u1321\u12cb\u1275", "\u12a8\u1233\u12d3\u1275"], DATEFORMATS:["EEEE\u1363 dd MMMM \u1240\u1295 y G", "dd MMMM y", "MMM d y", "dd/MM/yy"], TIMEFORMATS:["hh:mm:ss a zzzz", "hh:mm:ss a z", "h:mm:ss a", "h:mm a"], AVAILABLEFORMATS:{Md:"M-d", MMMMd:"MMMM d", MMMd:"MMM d"}, FIRSTDAYOFWEEK:5, WEEKENDRANGE:[5, 6], FIRSTWEEKCUTOFFDAY:1};
 goog.i18n.DateTimeSymbols_ar = {ERAS:["\u0642.\u0645", "\u0645"], ERANAMES:["\u0642\u0628\u0644 \u0627\u0644\u0645\u064a\u0644\u0627\u062f", "\u0645\u064a\u0644\u0627\u062f\u064a"], NARROWMONTHS:["\u064a", "\u0641", "\u0645", "\u0623", "\u0648", "\u0646", "\u0644", "\u063a", "\u0633", "\u0643", "\u0628", "\u062f"], STANDALONENARROWMONTHS:["\u064a", "\u0641", "\u0645", "\u0623", "\u0648", "\u0646", "\u0644", "\u063a", "\u0633", "\u0643", "\u0628", "\u062f"], MONTHS:["\u064a\u0646\u0627\u064a\u0631", 
 "\u0641\u0628\u0631\u0627\u064a\u0631", "\u0645\u0627\u0631\u0633", "\u0623\u0628\u0631\u064a\u0644", "\u0645\u0627\u064a\u0648", "\u064a\u0648\u0646\u064a\u0648", "\u064a\u0648\u0644\u064a\u0648", "\u0623\u063a\u0633\u0637\u0633", "\u0633\u0628\u062a\u0645\u0628\u0631", "\u0623\u0643\u062a\u0648\u0628\u0631", "\u0646\u0648\u0641\u0645\u0628\u0631", "\u062f\u064a\u0633\u0645\u0628\u0631"], STANDALONEMONTHS:["\u064a\u0646\u0627\u064a\u0631", "\u0641\u0628\u0631\u0627\u064a\u0631", "\u0645\u0627\u0631\u0633", 
 "\u0623\u0628\u0631\u064a\u0644", "\u0645\u0627\u064a\u0648", "\u064a\u0648\u0646\u064a\u0648", "\u064a\u0648\u0644\u064a\u0648", "\u0623\u063a\u0633\u0637\u0633", "\u0633\u0628\u062a\u0645\u0628\u0631", "\u0623\u0643\u062a\u0648\u0628\u0631", "\u0646\u0648\u0641\u0645\u0628\u0631", "\u062f\u064a\u0633\u0645\u0628\u0631"], SHORTMONTHS:["\u064a\u0646\u0627\u064a\u0631", "\u0641\u0628\u0631\u0627\u064a\u0631", "\u0645\u0627\u0631\u0633", "\u0623\u0628\u0631\u064a\u0644", "\u0645\u0627\u064a\u0648", 
@@ -21594,10 +21680,6 @@ goog.i18n.DateTimeSymbols_sv = {ERAS:["f.Kr.", "e.Kr."], ERANAMES:["f\u00f6re Kr
 "oktober", "november", "december"], SHORTMONTHS:["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"], STANDALONESHORTMONTHS:["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"], WEEKDAYS:["s\u00f6ndag", "m\u00e5ndag", "tisdag", "onsdag", "torsdag", "fredag", "l\u00f6rdag"], STANDALONEWEEKDAYS:["s\u00f6ndag", "m\u00e5ndag", "tisdag", "onsdag", "torsdag", "fredag", "l\u00f6rdag"], SHORTWEEKDAYS:["s\u00f6n", "m\u00e5n", "tis", "ons", "tors", 
 "fre", "l\u00f6r"], STANDALONESHORTWEEKDAYS:["s\u00f6n", "m\u00e5n", "tis", "ons", "tors", "fre", "l\u00f6r"], NARROWWEEKDAYS:["S", "M", "T", "O", "T", "F", "L"], STANDALONENARROWWEEKDAYS:["S", "M", "T", "O", "T", "F", "L"], SHORTQUARTERS:["K1", "K2", "K3", "K4"], QUARTERS:["1:a kvartalet", "2:a kvartalet", "3:e kvartalet", "4:e kvartalet"], AMPMS:["fm", "em"], DATEFORMATS:["EEEE d MMMM y", "d MMMM y", "d MMM y", "yyyy-MM-dd"], TIMEFORMATS:["'kl'. HH.mm.ss zzzz", "HH.mm.ss z", "HH.mm.ss", "HH.mm"], 
 AVAILABLEFORMATS:{Md:"d/M", MMMMd:"d MMMM", MMMd:"d MMM"}, FIRSTDAYOFWEEK:0, WEEKENDRANGE:[5, 6], FIRSTWEEKCUTOFFDAY:3};
-goog.i18n.DateTimeSymbols_sw = {ERAS:["KK", "BK"], ERANAMES:["Kabla ya Kristo", "Baada ya Kristo"], NARROWMONTHS:["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], STANDALONENARROWMONTHS:["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], MONTHS:["Januari", "Februari", "Machi", "Aprili", "Mei", "Juni", "Julai", "Agosti", "Septemba", "Oktoba", "Novemba", "Desemba"], STANDALONEMONTHS:["Januari", "Februari", "Machi", "Aprili", "Mei", "Juni", "Julai", "Agosti", "Septemba", 
-"Oktoba", "Novemba", "Desemba"], SHORTMONTHS:["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ago", "Sep", "Okt", "Nov", "Des"], STANDALONESHORTMONTHS:["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ago", "Sep", "Okt", "Nov", "Des"], WEEKDAYS:["Jumapili", "Jumatatu", "Jumanne", "Jumatano", "Alhamisi", "Ijumaa", "Jumamosi"], STANDALONEWEEKDAYS:["Jumapili", "Jumatatu", "Jumanne", "Jumatano", "Alhamisi", "Ijumaa", "Jumamosi"], SHORTWEEKDAYS:["Jpi", "Jtt", "Jnn", "Jtn", "Alh", "Iju", "Jmo"], STANDALONESHORTWEEKDAYS:["Jpi", 
-"Jtt", "Jnn", "Jtn", "Alh", "Iju", "Jmo"], NARROWWEEKDAYS:["1", "2", "3", "4", "5", "6", "7"], STANDALONENARROWWEEKDAYS:["1", "2", "3", "4", "5", "6", "7"], SHORTQUARTERS:["R1", "R2", "R3", "R4"], QUARTERS:["robo ya kwanza", "robo ya pili", "robo ya tatu", "robo ya nne"], AMPMS:["AM", "PM"], DATEFORMATS:["EEEE, y MMMM dd", "y MMMM d", "y MMM d", "yy/MM/dd"], TIMEFORMATS:["HH:mm:ss zzzz", "HH:mm:ss z", "HH:mm:ss", "HH:mm"], AVAILABLEFORMATS:{Md:"M-d", MMMMd:"MMMM d", MMMd:"MMM d"}, FIRSTDAYOFWEEK:0, 
-WEEKENDRANGE:[5, 6], FIRSTWEEKCUTOFFDAY:3};
 goog.i18n.DateTimeSymbols_ta = {ERAS:["\u0b95\u0bbf\u0bae\u0bc1", "\u0b95\u0bbf\u0baa\u0bbf"], ERANAMES:["\u0b95\u0bbf\u0bb1\u0bbf\u0bb8\u0bcd\u0ba4\u0bc1\u0bb5\u0bc1\u0b95\u0bcd\u0b95\u0bc1 \u0bae\u0bc1\u0ba9\u0bcd", "\u0b85\u0ba9\u0bcb \u0b9f\u0bcb\u0bae\u0bbf\u0ba9\u0bbf"], NARROWMONTHS:["\u0b9c", "\u0baa\u0bbf", "\u0bae\u0bbe", "\u0b8f", "\u0bae\u0bc7", "\u0b9c\u0bc2", "\u0b9c\u0bc2", "\u0b86", "\u0b9a\u0bc6", "\u0b85", "\u0ba8", "\u0b9f\u0bbf"], STANDALONENARROWMONTHS:["\u0b9c", "\u0baa\u0bbf", 
 "\u0bae\u0bbe", "\u0b8f", "\u0bae\u0bc7", "\u0b9c\u0bc2", "\u0b9c\u0bc2", "\u0b86", "\u0b9a\u0bc6", "\u0b85", "\u0ba8", "\u0b9f\u0bbf"], MONTHS:["\u0b9c\u0ba9\u0bb5\u0bb0\u0bbf", "\u0baa\u0bbf\u0baa\u0bcd\u0bb0\u0bb5\u0bb0\u0bbf", "\u0bae\u0bbe\u0bb0\u0bcd\u0b9a\u0bcd", "\u0b8f\u0baa\u0bcd\u0bb0\u0bb2\u0bcd", "\u0bae\u0bc7", "\u0b9c\u0bc2\u0ba9\u0bcd", "\u0b9c\u0bc2\u0bb2\u0bc8", "\u0b86\u0b95\u0bb8\u0bcd\u0b9f\u0bcd", "\u0b9a\u0bc6\u0baa\u0bcd\u0b9f\u0bae\u0bcd\u0baa\u0bb0\u0bcd", "\u0b85\u0b95\u0bcd\u0b9f\u0bcb\u0baa\u0bb0\u0bcd", 
 "\u0ba8\u0bb5\u0bae\u0bcd\u0baa\u0bb0\u0bcd", "\u0b9f\u0bbf\u0b9a\u0bae\u0bcd\u0baa\u0bb0\u0bcd"], STANDALONEMONTHS:["\u0b9c\u0ba9\u0bb5\u0bb0\u0bbf", "\u0baa\u0bbf\u0baa\u0bcd\u0bb0\u0bb5\u0bb0\u0bbf", "\u0bae\u0bbe\u0bb0\u0bcd\u0b9a\u0bcd", "\u0b8f\u0baa\u0bcd\u0bb0\u0bb2\u0bcd", "\u0bae\u0bc7", "\u0b9c\u0bc2\u0ba9\u0bcd", "\u0b9c\u0bc2\u0bb2\u0bc8", "\u0b86\u0b95\u0bb8\u0bcd\u0b9f\u0bcd", "\u0b9a\u0bc6\u0baa\u0bcd\u0b9f\u0bae\u0bcd\u0baa\u0bb0\u0bcd", "\u0b85\u0b95\u0bcd\u0b9f\u0bcb\u0baa\u0bb0\u0bcd", 
@@ -21658,250 +21740,242 @@ goog.i18n.DateTimeSymbols_zh = {ERAS:["\u516c\u5143\u524d", "\u516c\u5143"], ERA
 "\u5468\u4e00", "\u5468\u4e8c", "\u5468\u4e09", "\u5468\u56db", "\u5468\u4e94", "\u5468\u516d"], STANDALONESHORTWEEKDAYS:["\u5468\u65e5", "\u5468\u4e00", "\u5468\u4e8c", "\u5468\u4e09", "\u5468\u56db", "\u5468\u4e94", "\u5468\u516d"], NARROWWEEKDAYS:["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"], STANDALONENARROWWEEKDAYS:["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"], SHORTQUARTERS:["1\u5b63", "2\u5b63", "3\u5b63", "4\u5b63"], QUARTERS:["\u7b2c1\u5b63\u5ea6", 
 "\u7b2c2\u5b63\u5ea6", "\u7b2c3\u5b63\u5ea6", "\u7b2c4\u5b63\u5ea6"], AMPMS:["\u4e0a\u5348", "\u4e0b\u5348"], DATEFORMATS:["y\u5e74M\u6708d\u65e5EEEE", "y\u5e74M\u6708d\u65e5", "yyyy-M-d", "yy-M-d"], TIMEFORMATS:["zzzzah\u65f6mm\u5206ss\u79d2", "zah\u65f6mm\u5206ss\u79d2", "ahh:mm:ss", "ah:mm"], AVAILABLEFORMATS:{Md:"M-d", MMMMd:"MMMMd\u65e5", MMMd:"MMMd\u65e5"}, FIRSTDAYOFWEEK:6, WEEKENDRANGE:[5, 6], FIRSTWEEKCUTOFFDAY:2};
 goog.i18n.DateTimeSymbols_zh_CN = goog.i18n.DateTimeSymbols_zh;
-goog.i18n.DateTimeSymbols_zh_HK = {ERAS:["\u897f\u5143\u524d", "\u897f\u5143"], ERANAMES:["\u897f\u5143\u524d", "\u897f\u5143"], NARROWMONTHS:["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], STANDALONENARROWMONTHS:["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], MONTHS:["1\u6708", "2\u6708", "3\u6708", "4\u6708", "5\u6708", "6\u6708", "7\u6708", "8\u6708", "9\u6708", "10\u6708", "11\u6708", "12\u6708"], STANDALONEMONTHS:["\u4e00\u6708", "\u4e8c\u6708", "\u4e09\u6708", 
-"\u56db\u6708", "\u4e94\u6708", "\u516d\u6708", "\u4e03\u6708", "\u516b\u6708", "\u4e5d\u6708", "\u5341\u6708", "\u5341\u4e00\u6708", "\u5341\u4e8c\u6708"], SHORTMONTHS:["1\u6708", "2\u6708", "3\u6708", "4\u6708", "5\u6708", "6\u6708", "7\u6708", "8\u6708", "9\u6708", "10\u6708", "11\u6708", "12\u6708"], STANDALONESHORTMONTHS:["\u4e00\u6708", "\u4e8c\u6708", "\u4e09\u6708", "\u56db\u6708", "\u4e94\u6708", "\u516d\u6708", "\u4e03\u6708", "\u516b\u6708", "\u4e5d\u6708", "\u5341\u6708", "\u5341\u4e00\u6708", 
-"\u5341\u4e8c\u6708"], WEEKDAYS:["\u661f\u671f\u65e5", "\u661f\u671f\u4e00", "\u661f\u671f\u4e8c", "\u661f\u671f\u4e09", "\u661f\u671f\u56db", "\u661f\u671f\u4e94", "\u661f\u671f\u516d"], STANDALONEWEEKDAYS:["\u661f\u671f\u65e5", "\u661f\u671f\u4e00", "\u661f\u671f\u4e8c", "\u661f\u671f\u4e09", "\u661f\u671f\u56db", "\u661f\u671f\u4e94", "\u661f\u671f\u516d"], SHORTWEEKDAYS:["\u9031\u65e5", "\u9031\u4e00", "\u9031\u4e8c", "\u9031\u4e09", "\u9031\u56db", "\u9031\u4e94", "\u9031\u516d"], STANDALONESHORTWEEKDAYS:["\u9031\u65e5", 
-"\u9031\u4e00", "\u9031\u4e8c", "\u9031\u4e09", "\u9031\u56db", "\u9031\u4e94", "\u9031\u516d"], NARROWWEEKDAYS:["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"], STANDALONENARROWWEEKDAYS:["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"], SHORTQUARTERS:["1\u5b63", "2\u5b63", "3\u5b63", "4\u5b63"], QUARTERS:["\u7b2c1\u5b63", "\u7b2c2\u5b63", "\u7b2c3\u5b63", "\u7b2c4\u5b63"], AMPMS:["\u4e0a\u5348", "\u4e0b\u5348"], DATEFORMATS:["y\u5e74M\u6708d\u65e5EEEE", 
-"y\u5e74M\u6708d\u65e5", "y\u5e74M\u6708d\u65e5", "yy\u5e74M\u6708d\u65e5"], TIMEFORMATS:["zzzzah\u6642mm\u5206ss\u79d2", "zah\u6642mm\u5206ss\u79d2", "ahh:mm:ss", "ah:mm"], AVAILABLEFORMATS:{Md:"M/d", MMMMd:"MMMMd\u65e5", MMMd:"MMMd\u65e5"}, FIRSTDAYOFWEEK:6, WEEKENDRANGE:[5, 6], FIRSTWEEKCUTOFFDAY:2};
-goog.i18n.DateTimeSymbols_zh_TW = {ERAS:["\u897f\u5143\u524d", "\u897f\u5143"], ERANAMES:["\u897f\u5143\u524d", "\u897f\u5143"], NARROWMONTHS:["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], STANDALONENARROWMONTHS:["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], MONTHS:["1\u6708", "2\u6708", "3\u6708", "4\u6708", "5\u6708", "6\u6708", "7\u6708", "8\u6708", "9\u6708", "10\u6708", "11\u6708", "12\u6708"], STANDALONEMONTHS:["\u4e00\u6708", "\u4e8c\u6708", "\u4e09\u6708", 
-"\u56db\u6708", "\u4e94\u6708", "\u516d\u6708", "\u4e03\u6708", "\u516b\u6708", "\u4e5d\u6708", "\u5341\u6708", "\u5341\u4e00\u6708", "\u5341\u4e8c\u6708"], SHORTMONTHS:["1\u6708", "2\u6708", "3\u6708", "4\u6708", "5\u6708", "6\u6708", "7\u6708", "8\u6708", "9\u6708", "10\u6708", "11\u6708", "12\u6708"], STANDALONESHORTMONTHS:["\u4e00\u6708", "\u4e8c\u6708", "\u4e09\u6708", "\u56db\u6708", "\u4e94\u6708", "\u516d\u6708", "\u4e03\u6708", "\u516b\u6708", "\u4e5d\u6708", "\u5341\u6708", "\u5341\u4e00\u6708", 
-"\u5341\u4e8c\u6708"], WEEKDAYS:["\u661f\u671f\u65e5", "\u661f\u671f\u4e00", "\u661f\u671f\u4e8c", "\u661f\u671f\u4e09", "\u661f\u671f\u56db", "\u661f\u671f\u4e94", "\u661f\u671f\u516d"], STANDALONEWEEKDAYS:["\u661f\u671f\u65e5", "\u661f\u671f\u4e00", "\u661f\u671f\u4e8c", "\u661f\u671f\u4e09", "\u661f\u671f\u56db", "\u661f\u671f\u4e94", "\u661f\u671f\u516d"], SHORTWEEKDAYS:["\u9031\u65e5", "\u9031\u4e00", "\u9031\u4e8c", "\u9031\u4e09", "\u9031\u56db", "\u9031\u4e94", "\u9031\u516d"], STANDALONESHORTWEEKDAYS:["\u9031\u65e5", 
-"\u9031\u4e00", "\u9031\u4e8c", "\u9031\u4e09", "\u9031\u56db", "\u9031\u4e94", "\u9031\u516d"], NARROWWEEKDAYS:["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"], STANDALONENARROWWEEKDAYS:["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"], SHORTQUARTERS:["1\u5b63", "2\u5b63", "3\u5b63", "4\u5b63"], QUARTERS:["\u7b2c1\u5b63", "\u7b2c2\u5b63", "\u7b2c3\u5b63", "\u7b2c4\u5b63"], AMPMS:["\u4e0a\u5348", "\u4e0b\u5348"], DATEFORMATS:["y\u5e74M\u6708d\u65e5EEEE", 
-"y\u5e74M\u6708d\u65e5", "yyyy/M/d", "yy/M/d"], TIMEFORMATS:["zzzzah\u6642mm\u5206ss\u79d2", "zah\u6642mm\u5206ss\u79d2", "ah:mm:ss", "ah:mm"], AVAILABLEFORMATS:{Md:"M/d", MMMMd:"MMMMd\u65e5", MMMd:"MMMd\u65e5"}, FIRSTDAYOFWEEK:6, WEEKENDRANGE:[5, 6], FIRSTWEEKCUTOFFDAY:2};
-if(goog.LOCALE == "am") {
-  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_am
+goog.i18n.DateTimeSymbols_zh_HK = {ERAS:["\u516c\u5143\u524d", "\u516c\u5143"], ERANAMES:["\u897f\u5143\u524d", "\u897f\u5143"], NARROWMONTHS:["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], STANDALONENARROWMONTHS:["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], MONTHS:["1\u6708", "2\u6708", "3\u6708", "4\u6708", "5\u6708", "6\u6708", "7\u6708", "8\u6708", "9\u6708", "10\u6708", "11\u6708", "12\u6708"], STANDALONEMONTHS:["\u4e00\u6708", "\u4e8c\u6708", "\u4e09\u6708", 
+"\u56db\u6708", "\u4e94\u6708", "\u516d\u6708", "\u4e03\u6708", "\u516b\u6708", "\u4e5d\u6708", "\u5341\u6708", "\u5341\u4e00\u6708", "\u5341\u4e8c\u6708"], SHORTMONTHS:["1\u6708", "2\u6708", "3\u6708", "4\u6708", "5\u6708", "6\u6708", "7\u6708", "8\u6708", "9\u6708", "10\u6708", "11\u6708", "12\u6708"], STANDALONESHORTMONTHS:["1\u6708", "2\u6708", "3\u6708", "4\u6708", "5\u6708", "6\u6708", "7\u6708", "8\u6708", "9\u6708", "10\u6708", "11\u6708", "12\u6708"], WEEKDAYS:["\u661f\u671f\u65e5", "\u661f\u671f\u4e00", 
+"\u661f\u671f\u4e8c", "\u661f\u671f\u4e09", "\u661f\u671f\u56db", "\u661f\u671f\u4e94", "\u661f\u671f\u516d"], STANDALONEWEEKDAYS:["\u661f\u671f\u65e5", "\u661f\u671f\u4e00", "\u661f\u671f\u4e8c", "\u661f\u671f\u4e09", "\u661f\u671f\u56db", "\u661f\u671f\u4e94", "\u661f\u671f\u516d"], SHORTWEEKDAYS:["\u9031\u65e5", "\u9031\u4e00", "\u9031\u4e8c", "\u9031\u4e09", "\u9031\u56db", "\u9031\u4e94", "\u9031\u516d"], STANDALONESHORTWEEKDAYS:["\u9031\u65e5", "\u9031\u4e00", "\u9031\u4e8c", "\u9031\u4e09", 
+"\u9031\u56db", "\u9031\u4e94", "\u9031\u516d"], NARROWWEEKDAYS:["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"], STANDALONENARROWWEEKDAYS:["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"], SHORTQUARTERS:["1\u5b63", "2\u5b63", "3\u5b63", "4\u5b63"], QUARTERS:["\u7b2c1\u5b63", "\u7b2c2\u5b63", "\u7b2c3\u5b63", "\u7b2c4\u5b63"], AMPMS:["\u4e0a\u5348", "\u4e0b\u5348"], DATEFORMATS:["y\u5e74M\u6708d\u65e5EEEE", "y\u5e74M\u6708d\u65e5", "y\u5e74M\u6708d\u65e5", 
+"yy\u5e74M\u6708d\u65e5"], TIMEFORMATS:["zzzzah\u6642mm\u5206ss\u79d2", "zah\u6642mm\u5206ss\u79d2", "ahh:mm:ss", "ah:mm"], AVAILABLEFORMATS:{Md:"M/d", MMMMd:"MMMMd\u65e5", MMMd:"MMMd\u65e5"}, FIRSTDAYOFWEEK:6, WEEKENDRANGE:[5, 6], FIRSTWEEKCUTOFFDAY:2};
+goog.i18n.DateTimeSymbols_zh_TW = {ERAS:["\u516c\u5143\u524d", "\u516c\u5143"], ERANAMES:["\u897f\u5143\u524d", "\u897f\u5143"], NARROWMONTHS:["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], STANDALONENARROWMONTHS:["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], MONTHS:["1\u6708", "2\u6708", "3\u6708", "4\u6708", "5\u6708", "6\u6708", "7\u6708", "8\u6708", "9\u6708", "10\u6708", "11\u6708", "12\u6708"], STANDALONEMONTHS:["\u4e00\u6708", "\u4e8c\u6708", "\u4e09\u6708", 
+"\u56db\u6708", "\u4e94\u6708", "\u516d\u6708", "\u4e03\u6708", "\u516b\u6708", "\u4e5d\u6708", "\u5341\u6708", "\u5341\u4e00\u6708", "\u5341\u4e8c\u6708"], SHORTMONTHS:["1\u6708", "2\u6708", "3\u6708", "4\u6708", "5\u6708", "6\u6708", "7\u6708", "8\u6708", "9\u6708", "10\u6708", "11\u6708", "12\u6708"], STANDALONESHORTMONTHS:["1\u6708", "2\u6708", "3\u6708", "4\u6708", "5\u6708", "6\u6708", "7\u6708", "8\u6708", "9\u6708", "10\u6708", "11\u6708", "12\u6708"], WEEKDAYS:["\u661f\u671f\u65e5", "\u661f\u671f\u4e00", 
+"\u661f\u671f\u4e8c", "\u661f\u671f\u4e09", "\u661f\u671f\u56db", "\u661f\u671f\u4e94", "\u661f\u671f\u516d"], STANDALONEWEEKDAYS:["\u661f\u671f\u65e5", "\u661f\u671f\u4e00", "\u661f\u671f\u4e8c", "\u661f\u671f\u4e09", "\u661f\u671f\u56db", "\u661f\u671f\u4e94", "\u661f\u671f\u516d"], SHORTWEEKDAYS:["\u9031\u65e5", "\u9031\u4e00", "\u9031\u4e8c", "\u9031\u4e09", "\u9031\u56db", "\u9031\u4e94", "\u9031\u516d"], STANDALONESHORTWEEKDAYS:["\u9031\u65e5", "\u9031\u4e00", "\u9031\u4e8c", "\u9031\u4e09", 
+"\u9031\u56db", "\u9031\u4e94", "\u9031\u516d"], NARROWWEEKDAYS:["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"], STANDALONENARROWWEEKDAYS:["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"], SHORTQUARTERS:["1\u5b63", "2\u5b63", "3\u5b63", "4\u5b63"], QUARTERS:["\u7b2c1\u5b63", "\u7b2c2\u5b63", "\u7b2c3\u5b63", "\u7b2c4\u5b63"], AMPMS:["\u4e0a\u5348", "\u4e0b\u5348"], DATEFORMATS:["y\u5e74M\u6708d\u65e5EEEE", "y\u5e74M\u6708d\u65e5", "yyyy/M/d", "yy/M/d"], 
+TIMEFORMATS:["zzzzah\u6642mm\u5206ss\u79d2", "zah\u6642mm\u5206ss\u79d2", "ah:mm:ss", "ah:mm"], AVAILABLEFORMATS:{Md:"M/d", MMMMd:"MMMMd\u65e5", MMMd:"MMMd\u65e5"}, FIRSTDAYOFWEEK:6, WEEKENDRANGE:[5, 6], FIRSTWEEKCUTOFFDAY:2};
+if(goog.LOCALE == "ar") {
+  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ar
 }else {
-  if(goog.LOCALE == "ar") {
-    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ar
+  if(goog.LOCALE == "bg") {
+    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_bg
   }else {
-    if(goog.LOCALE == "bg") {
-      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_bg
+    if(goog.LOCALE == "bn") {
+      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_bn
     }else {
-      if(goog.LOCALE == "bn") {
-        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_bn
+      if(goog.LOCALE == "ca") {
+        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ca
       }else {
-        if(goog.LOCALE == "ca") {
-          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ca
+        if(goog.LOCALE == "cs") {
+          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_cs
         }else {
-          if(goog.LOCALE == "cs") {
-            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_cs
+          if(goog.LOCALE == "da") {
+            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_da
           }else {
-            if(goog.LOCALE == "da") {
-              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_da
+            if(goog.LOCALE == "de") {
+              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_de
             }else {
-              if(goog.LOCALE == "de") {
-                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_de
+              if(goog.LOCALE == "de_AT" || goog.LOCALE == "de-AT") {
+                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_de_AT
               }else {
-                if(goog.LOCALE == "de_AT" || goog.LOCALE == "de-AT") {
-                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_de_AT
+                if(goog.LOCALE == "de_CH" || goog.LOCALE == "de-CH") {
+                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_de
                 }else {
-                  if(goog.LOCALE == "de_CH" || goog.LOCALE == "de-CH") {
-                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_de
+                  if(goog.LOCALE == "el") {
+                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_el
                   }else {
-                    if(goog.LOCALE == "el") {
-                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_el
+                    if(goog.LOCALE == "en") {
+                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en
                     }else {
-                      if(goog.LOCALE == "en") {
-                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en
+                      if(goog.LOCALE == "en_AU" || goog.LOCALE == "en-AU") {
+                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en_AU
                       }else {
-                        if(goog.LOCALE == "en_AU" || goog.LOCALE == "en-AU") {
-                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en_AU
+                        if(goog.LOCALE == "en_GB" || goog.LOCALE == "en-GB") {
+                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en_GB
                         }else {
-                          if(goog.LOCALE == "en_GB" || goog.LOCALE == "en-GB") {
-                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en_GB
+                          if(goog.LOCALE == "en_IE" || goog.LOCALE == "en-IE") {
+                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en_IE
                           }else {
-                            if(goog.LOCALE == "en_IE" || goog.LOCALE == "en-IE") {
-                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en_IE
+                            if(goog.LOCALE == "en_IN" || goog.LOCALE == "en-IN") {
+                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en_IN
                             }else {
-                              if(goog.LOCALE == "en_IN" || goog.LOCALE == "en-IN") {
-                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en_IN
+                              if(goog.LOCALE == "en_SG" || goog.LOCALE == "en-SG") {
+                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en
                               }else {
-                                if(goog.LOCALE == "en_SG" || goog.LOCALE == "en-SG") {
+                                if(goog.LOCALE == "en_US" || goog.LOCALE == "en-US") {
                                   goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en
                                 }else {
-                                  if(goog.LOCALE == "en_US" || goog.LOCALE == "en-US") {
-                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en
+                                  if(goog.LOCALE == "en_ZA" || goog.LOCALE == "en-ZA") {
+                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en_ZA
                                   }else {
-                                    if(goog.LOCALE == "en_ZA" || goog.LOCALE == "en-ZA") {
-                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en_ZA
+                                    if(goog.LOCALE == "es") {
+                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_es
                                     }else {
-                                      if(goog.LOCALE == "es") {
-                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_es
+                                      if(goog.LOCALE == "et") {
+                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_et
                                       }else {
-                                        if(goog.LOCALE == "et") {
-                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_et
+                                        if(goog.LOCALE == "eu") {
+                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_eu
                                         }else {
-                                          if(goog.LOCALE == "eu") {
-                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_eu
+                                          if(goog.LOCALE == "fa") {
+                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_fa
                                           }else {
-                                            if(goog.LOCALE == "fa") {
-                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_fa
+                                            if(goog.LOCALE == "fi") {
+                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_fi
                                             }else {
-                                              if(goog.LOCALE == "fi") {
-                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_fi
+                                              if(goog.LOCALE == "fil") {
+                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_fil
                                               }else {
-                                                if(goog.LOCALE == "fil") {
-                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_fil
+                                                if(goog.LOCALE == "fr") {
+                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_fr
                                                 }else {
-                                                  if(goog.LOCALE == "fr") {
-                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_fr
+                                                  if(goog.LOCALE == "fr_CA" || goog.LOCALE == "fr-CA") {
+                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_fr_CA
                                                   }else {
-                                                    if(goog.LOCALE == "fr_CA" || goog.LOCALE == "fr-CA") {
-                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_fr_CA
+                                                    if(goog.LOCALE == "gl") {
+                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_gl
                                                     }else {
-                                                      if(goog.LOCALE == "gl") {
-                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_gl
+                                                      if(goog.LOCALE == "gsw") {
+                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_gsw
                                                       }else {
-                                                        if(goog.LOCALE == "gsw") {
-                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_gsw
+                                                        if(goog.LOCALE == "gu") {
+                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_gu
                                                         }else {
-                                                          if(goog.LOCALE == "gu") {
-                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_gu
+                                                          if(goog.LOCALE == "he") {
+                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_he
                                                           }else {
-                                                            if(goog.LOCALE == "he") {
-                                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_he
+                                                            if(goog.LOCALE == "hi") {
+                                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_hi
                                                             }else {
-                                                              if(goog.LOCALE == "hi") {
-                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_hi
+                                                              if(goog.LOCALE == "hr") {
+                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_hr
                                                               }else {
-                                                                if(goog.LOCALE == "hr") {
-                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_hr
+                                                                if(goog.LOCALE == "hu") {
+                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_hu
                                                                 }else {
-                                                                  if(goog.LOCALE == "hu") {
-                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_hu
+                                                                  if(goog.LOCALE == "id") {
+                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_id
                                                                   }else {
-                                                                    if(goog.LOCALE == "id") {
-                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_id
+                                                                    if(goog.LOCALE == "in") {
+                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_in
                                                                     }else {
-                                                                      if(goog.LOCALE == "in") {
-                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_in
+                                                                      if(goog.LOCALE == "is") {
+                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_is
                                                                       }else {
-                                                                        if(goog.LOCALE == "is") {
-                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_is
+                                                                        if(goog.LOCALE == "it") {
+                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_it
                                                                         }else {
-                                                                          if(goog.LOCALE == "it") {
-                                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_it
+                                                                          if(goog.LOCALE == "iw") {
+                                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_iw
                                                                           }else {
-                                                                            if(goog.LOCALE == "iw") {
-                                                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_iw
+                                                                            if(goog.LOCALE == "ja") {
+                                                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ja
                                                                             }else {
-                                                                              if(goog.LOCALE == "ja") {
-                                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ja
+                                                                              if(goog.LOCALE == "kn") {
+                                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_kn
                                                                               }else {
-                                                                                if(goog.LOCALE == "kn") {
-                                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_kn
+                                                                                if(goog.LOCALE == "ko") {
+                                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ko
                                                                                 }else {
-                                                                                  if(goog.LOCALE == "ko") {
-                                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ko
+                                                                                  if(goog.LOCALE == "ln") {
+                                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ln
                                                                                   }else {
-                                                                                    if(goog.LOCALE == "ln") {
-                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ln
+                                                                                    if(goog.LOCALE == "lt") {
+                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_lt
                                                                                     }else {
-                                                                                      if(goog.LOCALE == "lt") {
-                                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_lt
+                                                                                      if(goog.LOCALE == "lv") {
+                                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_lv
                                                                                       }else {
-                                                                                        if(goog.LOCALE == "lv") {
-                                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_lv
+                                                                                        if(goog.LOCALE == "ml") {
+                                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ml
                                                                                         }else {
-                                                                                          if(goog.LOCALE == "ml") {
-                                                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ml
+                                                                                          if(goog.LOCALE == "mo") {
+                                                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_mo
                                                                                           }else {
-                                                                                            if(goog.LOCALE == "mo") {
-                                                                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_mo
+                                                                                            if(goog.LOCALE == "mr") {
+                                                                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_mr
                                                                                             }else {
-                                                                                              if(goog.LOCALE == "mr") {
-                                                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_mr
+                                                                                              if(goog.LOCALE == "ms") {
+                                                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ms
                                                                                               }else {
-                                                                                                if(goog.LOCALE == "ms") {
-                                                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ms
+                                                                                                if(goog.LOCALE == "mt") {
+                                                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_mt
                                                                                                 }else {
-                                                                                                  if(goog.LOCALE == "mt") {
-                                                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_mt
+                                                                                                  if(goog.LOCALE == "nl") {
+                                                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_nl
                                                                                                   }else {
-                                                                                                    if(goog.LOCALE == "nl") {
-                                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_nl
+                                                                                                    if(goog.LOCALE == "no") {
+                                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_no
                                                                                                     }else {
-                                                                                                      if(goog.LOCALE == "no") {
-                                                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_no
+                                                                                                      if(goog.LOCALE == "or") {
+                                                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_or
                                                                                                       }else {
-                                                                                                        if(goog.LOCALE == "or") {
-                                                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_or
+                                                                                                        if(goog.LOCALE == "pl") {
+                                                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_pl
                                                                                                         }else {
-                                                                                                          if(goog.LOCALE == "pl") {
-                                                                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_pl
+                                                                                                          if(goog.LOCALE == "pt") {
+                                                                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_pt
                                                                                                           }else {
-                                                                                                            if(goog.LOCALE == "pt") {
+                                                                                                            if(goog.LOCALE == "pt_BR" || goog.LOCALE == "pt-BR") {
                                                                                                               goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_pt
                                                                                                             }else {
-                                                                                                              if(goog.LOCALE == "pt_BR" || goog.LOCALE == "pt-BR") {
-                                                                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_pt
+                                                                                                              if(goog.LOCALE == "pt_PT" || goog.LOCALE == "pt-PT") {
+                                                                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_pt_PT
                                                                                                               }else {
-                                                                                                                if(goog.LOCALE == "pt_PT" || goog.LOCALE == "pt-PT") {
-                                                                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_pt_PT
+                                                                                                                if(goog.LOCALE == "ro") {
+                                                                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ro
                                                                                                                 }else {
-                                                                                                                  if(goog.LOCALE == "ro") {
-                                                                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ro
+                                                                                                                  if(goog.LOCALE == "ru") {
+                                                                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ru
                                                                                                                   }else {
-                                                                                                                    if(goog.LOCALE == "ru") {
-                                                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ru
+                                                                                                                    if(goog.LOCALE == "sk") {
+                                                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sk
                                                                                                                     }else {
-                                                                                                                      if(goog.LOCALE == "sk") {
-                                                                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sk
+                                                                                                                      if(goog.LOCALE == "sl") {
+                                                                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sl
                                                                                                                       }else {
-                                                                                                                        if(goog.LOCALE == "sl") {
-                                                                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sl
+                                                                                                                        if(goog.LOCALE == "sq") {
+                                                                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sq
                                                                                                                         }else {
-                                                                                                                          if(goog.LOCALE == "sq") {
-                                                                                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sq
+                                                                                                                          if(goog.LOCALE == "sr") {
+                                                                                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sr
                                                                                                                           }else {
-                                                                                                                            if(goog.LOCALE == "sr") {
-                                                                                                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sr
+                                                                                                                            if(goog.LOCALE == "sv") {
+                                                                                                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sv
                                                                                                                             }else {
-                                                                                                                              if(goog.LOCALE == "sv") {
-                                                                                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sv
+                                                                                                                              if(goog.LOCALE == "ta") {
+                                                                                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ta
                                                                                                                               }else {
-                                                                                                                                if(goog.LOCALE == "sw") {
-                                                                                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_sw
+                                                                                                                                if(goog.LOCALE == "te") {
+                                                                                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_te
                                                                                                                                 }else {
-                                                                                                                                  if(goog.LOCALE == "ta") {
-                                                                                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ta
+                                                                                                                                  if(goog.LOCALE == "th") {
+                                                                                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_th
                                                                                                                                   }else {
-                                                                                                                                    if(goog.LOCALE == "te") {
-                                                                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_te
+                                                                                                                                    if(goog.LOCALE == "tl") {
+                                                                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_tl
                                                                                                                                     }else {
-                                                                                                                                      if(goog.LOCALE == "th") {
-                                                                                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_th
+                                                                                                                                      if(goog.LOCALE == "tr") {
+                                                                                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_tr
                                                                                                                                       }else {
-                                                                                                                                        if(goog.LOCALE == "tl") {
-                                                                                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_tl
+                                                                                                                                        if(goog.LOCALE == "uk") {
+                                                                                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_uk
                                                                                                                                         }else {
-                                                                                                                                          if(goog.LOCALE == "tr") {
-                                                                                                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_tr
+                                                                                                                                          if(goog.LOCALE == "ur") {
+                                                                                                                                            goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ur
                                                                                                                                           }else {
-                                                                                                                                            if(goog.LOCALE == "uk") {
-                                                                                                                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_uk
+                                                                                                                                            if(goog.LOCALE == "vi") {
+                                                                                                                                              goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_vi
                                                                                                                                             }else {
-                                                                                                                                              if(goog.LOCALE == "ur") {
-                                                                                                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_ur
+                                                                                                                                              if(goog.LOCALE == "zh") {
+                                                                                                                                                goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_zh
                                                                                                                                               }else {
-                                                                                                                                                if(goog.LOCALE == "vi") {
-                                                                                                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_vi
+                                                                                                                                                if(goog.LOCALE == "zh_CN" || goog.LOCALE == "zh-CN") {
+                                                                                                                                                  goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_zh
                                                                                                                                                 }else {
-                                                                                                                                                  if(goog.LOCALE == "zh") {
-                                                                                                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_zh
+                                                                                                                                                  if(goog.LOCALE == "zh_HK" || goog.LOCALE == "zh-HK") {
+                                                                                                                                                    goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_zh_HK
                                                                                                                                                   }else {
-                                                                                                                                                    if(goog.LOCALE == "zh_CN" || goog.LOCALE == "zh-CN") {
-                                                                                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_zh
+                                                                                                                                                    if(goog.LOCALE == "zh_TW" || goog.LOCALE == "zh-TW") {
+                                                                                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_zh_TW
                                                                                                                                                     }else {
-                                                                                                                                                      if(goog.LOCALE == "zh_HK" || goog.LOCALE == "zh-HK") {
-                                                                                                                                                        goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_zh_HK
-                                                                                                                                                      }else {
-                                                                                                                                                        if(goog.LOCALE == "zh_TW" || goog.LOCALE == "zh-TW") {
-                                                                                                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_zh_TW
-                                                                                                                                                        }else {
-                                                                                                                                                          goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en
-                                                                                                                                                        }
-                                                                                                                                                      }
+                                                                                                                                                      goog.i18n.DateTimeSymbols = goog.i18n.DateTimeSymbols_en
                                                                                                                                                     }
                                                                                                                                                   }
                                                                                                                                                 }
@@ -21977,7 +22051,7 @@ if(goog.LOCALE == "am") {
     }
   }
 };
-// Input 204
+// Input 201
 goog.provide("goog.i18n.TimeZone");
 goog.require("goog.array");
 goog.require("goog.string");
@@ -22073,7 +22147,7 @@ goog.i18n.TimeZone.prototype.getTimeZoneId = function() {
 goog.i18n.TimeZone.prototype.isDaylightTime = function(date) {
   return this.getDaylightAdjustment(date) > 0
 };
-// Input 205
+// Input 202
 goog.provide("goog.i18n.DateTimeFormat");
 goog.require("goog.asserts");
 goog.require("goog.i18n.DateTimeSymbols");
@@ -22288,7 +22362,7 @@ goog.i18n.DateTimeFormat.prototype.formatField_ = function(patternStr, date, dat
       return""
   }
 };
-// Input 206
+// Input 203
 goog.provide("kemia.io.mdl");
 goog.require("goog.i18n.DateTimeFormat");
 goog.require("goog.string");
@@ -22507,7 +22581,7 @@ kemia.io.mdl.readRxnfile = function(rxnfile) {
   }return reaction
 };
 goog.exportSymbol("kemia.io.mdl.readMolfile", kemia.io.mdl.readMolfile);
-// Input 207
+// Input 204
 goog.provide("kemia.io.smiles.SmilesGenerator");
 goog.require("kemia.model.Molecule");
 goog.require("kemia.model.Atom");
@@ -22529,7 +22603,7 @@ kemia.io.smiles.SmilesGenerator.generate = function(molecule, chiral) {
   if(chiral && rings.getAtomContainerCount() > 0);return"todo.."
 };
 goog.exportSymbol("kemia.io.smiles.SmilesGenerator.generate", kemia.io.smiles.SmilesGenerator.generate);
-// Input 208
+// Input 205
 goog.provide("kemia.query.IMapper");
 kemia.query.IMapper = function(query) {
 };
@@ -22539,7 +22613,7 @@ kemia.query.IMapper.prototype.mapUnique = function(molecule) {
 };
 kemia.query.IMapper.prototype.mapUniqueCallback = function(molecule, callback) {
 };
-// Input 209
+// Input 206
 goog.provide("kemia.query.State");
 kemia.query.State = function(type, query, queried) {
   this.type = type;
@@ -22550,7 +22624,7 @@ kemia.query.State = function(type, query, queried) {
   this.queriedPath = [];
   this.candidates = []
 };
-// Input 210
+// Input 207
 goog.provide("kemia.query.DFSMapper");
 goog.provide("kemia.query.DFSMapper.Type");
 goog.require("kemia.query.IMapper");
@@ -22725,13 +22799,13 @@ kemia.query.DFSMapper.prototype.mapFirst = function(queried) {
   }return new goog.structs.Map
 };
 goog.exportSymbol("kemia.query.DFSMapper.prototype.mapFirst", kemia.query.DFSMapper.prototype.mapFirst);
-// Input 211
+// Input 208
 goog.provide("kemia.query.IQueryCompiler");
 kemia.query.IQueryCompiler = function() {
 };
 kemia.query.IQueryCompiler.prototype.compile = function(variable) {
 };
-// Input 212
+// Input 209
 goog.provide("kemia.io.smiles.SmilesParser");
 goog.require("kemia.model.Molecule");
 goog.require("kemia.model.Atom");
@@ -22740,7 +22814,7 @@ goog.require("kemia.model.Reaction");
 kemia.io.smiles.SmilesParser.BondType = {NONE:"NONE", SINGLE_BOND:"-", DOUBLE_BOND:"=", TRIPLE_BOND:"#", QUAD_BOND:"$", AROMATIC_BOND:":", ANY:"~"};
 kemia.io.smiles.SmilesParser.BondStereo = {NONE:"NONE", CLOCKWISE:"@", COUNTER_CLOCKWISE:"@@"};
 kemia.io.smiles.SmilesParser.punctuation = {nobond:".", openbranch:"(", closebranch:")", singlebond:kemia.io.smiles.SmilesParser.BondType.SINGLE_BOND, doublebond:kemia.io.smiles.SmilesParser.BondType.DOUBLE_BOND, triplebond:kemia.io.smiles.SmilesParser.BondType.TRIPLE_BOND, quadbond:kemia.io.smiles.SmilesParser.BondType.QUAD_BOND, aromaticbond:kemia.io.smiles.SmilesParser.BondType.AROMATIC_BOND, ringclosure:"%", cis:"/", trans:"\\"};
-kemia.io.smiles.SmilesParser.smiPattern = new RegExp(/\[[^[]+\]|Br|B|Cl|C|N|F|O|P]|S|c|n|o|s|-|=|#|%[0-9][0-9]|[0-9]|\(|\)|./g);
+kemia.io.smiles.SmilesParser.smiPattern = new RegExp(/\[[^[]+\]|Br|B|Cl|C|N|F|O|P]|S|c|n|o|s|-|=[0-9]|=[0-9]|=|#[0-9]|#[0-9][0-9]|#|\$|%[0-9][0-9]|[0-9]|\(|\)|./g);
 kemia.io.smiles.SmilesParser.atomPattern = new RegExp(/^\[([0-9]*)([A-Z][a-z]?|c|n|o|se|s|as)(@|@@)?(H)?([0-9])?([+-][\d]?)?\]$/);
 kemia.io.smiles.SmilesParser.specialAtoms = ["C", "c", "N", "n", "O", "o", "S", "s", "P", "F", "Br", "Cl", "I", "B"];
 kemia.io.smiles.SmilesParser.aromaticAtoms = ["c", "n", "o", "s", "as", "se"];
@@ -22752,6 +22826,7 @@ kemia.io.smiles.SmilesParser.parse = function(smi) {
   var bond_type = kemia.io.smiles.SmilesParser.BondType.NONE;
   var branch = new Array;
   var ring = new Array;
+  var ringClosureOrder = new Array;
   var errstr = "";
   var chiralCenters = new Array;
   for(var i = 0;i < items.length;i++) {
@@ -22764,7 +22839,7 @@ kemia.io.smiles.SmilesParser.parse = function(smi) {
           if(branch.length) {
             previous_atom = branch.pop()
           }else {
-            errstr = " unbalanced parens"
+            errstr = " Unbalanced parents"
           }
         }else {
           if(item == kemia.io.smiles.SmilesParser.punctuation.singlebond) {
@@ -22797,29 +22872,42 @@ kemia.io.smiles.SmilesParser.parse = function(smi) {
                         if(item == kemia.io.smiles.SmilesParser.punctuation.trans);else {
                           if(!isNaN(ringid = parseInt(item, 10))) {
                             ring_atom = ring[ringid];
-                            if(ring_atom) {
+                            if(!ring_atom) {
+                              ring[ringid] = previous_atom
+                            }else {
                               mol.addBond(kemia.io.smiles.SmilesParser.createBond(bond_type, previous_atom, ring_atom));
                               bond_type = kemia.io.smiles.SmilesParser.BondType.NONE;
                               ring[ringid] = null
-                            }else {
-                              ring[ringid] = previous_atom
                             }
                           }else {
-                            smi_atom = kemia.io.smiles.SmilesParser.parseAtom(item);
-                            if(smi_atom.symbol) {
-                              natoms += 1;
-                              var atom = new kemia.model.Atom(smi_atom.symbol, 0, 0, smi_atom.charge, smi_atom.aromatic, smi_atom.isotope);
-                              if(previous_atom) {
-                                mol.addBond(kemia.io.smiles.SmilesParser.createBond(bond_type, previous_atom, atom));
-                                bond_type = kemia.io.smiles.SmilesParser.BondType.NONE
-                              }mol.addAtom(atom);
-                              if(smi_atom.stereo != "NONE") {
-                                chiralCenters.push(mol.indexOfAtom(atom));
-                                chiralCenters.push(smi_atom.stereo);
-                                chiralCenters.push(smi_atom.chiralHydrogenNeighbour)
-                              }previous_atom = atom
+                            if(item.length > 1 && (goog.string.startsWith(item, kemia.io.smiles.SmilesParser.BondType.DOUBLE_BOND) || goog.string.startsWith(item, kemia.io.smiles.SmilesParser.BondType.TRIPLE_BOND) || goog.string.startsWith(item, kemia.io.smiles.SmilesParser.BondType.QUAD_BOND)) && !isNaN(ringid = parseInt(item.substr(1), 10))) {
+                              ring_atom = ring[ringid];
+                              if(!ring_atom) {
+                                ring[ringid] = previous_atom;
+                                ringClosureOrder[ringid] = item.substr(0, 1)
+                              }else {
+                                mol.addBond(kemia.io.smiles.SmilesParser.createBond(ringClosureOrder[ringid], previous_atom, ring_atom));
+                                bond_type = kemia.io.smiles.SmilesParser.BondType.NONE;
+                                ring[ringid] = null;
+                                ringClosureOrder[ringid] = null
+                              }
                             }else {
-                              errstr = " unknown atom " + item
+                              smi_atom = kemia.io.smiles.SmilesParser.parseAtom(item);
+                              if(smi_atom.symbol) {
+                                natoms += 1;
+                                var atom = new kemia.model.Atom(smi_atom.symbol, 0, 0, smi_atom.charge, smi_atom.aromatic, smi_atom.isotope);
+                                if(previous_atom) {
+                                  mol.addBond(kemia.io.smiles.SmilesParser.createBond(bond_type, previous_atom, atom));
+                                  bond_type = kemia.io.smiles.SmilesParser.BondType.NONE
+                                }mol.addAtom(atom);
+                                if(smi_atom.stereo != "NONE") {
+                                  chiralCenters.push(mol.indexOfAtom(atom));
+                                  chiralCenters.push(smi_atom.stereo);
+                                  chiralCenters.push(smi_atom.chiralHydrogenNeighbour)
+                                }previous_atom = atom
+                              }else {
+                                errstr = " unknown atom " + item
+                              }
                             }
                           }
                         }
@@ -22981,7 +23069,7 @@ Ce:{number:58, name:"Cerium"}, Pr:{number:59, name:"Praseodymium"}, Nd:{number:6
 name:"Tantalum"}, W:{number:74, name:"Tungsten"}, Re:{number:75, name:"Rhenium"}, Os:{number:76, name:"Osmium"}, Ir:{number:77, name:"Iridium"}, Pt:{number:78, name:"Platinum"}, Au:{number:79, name:"Gold"}, Hg:{number:80, name:"Mercury"}, Tl:{number:81, name:"Thallium"}, Pb:{number:82, name:"Lead"}, Bi:{number:83, name:"Bismuth"}, Po:{number:84, name:"Polonium"}, At:{number:85, name:"Astatine"}, Rn:{number:86, name:"Radon"}, Fr:{number:87, name:"Francium"}, Ra:{number:88, name:"Radium"}, Ac:{number:89, 
 name:"Actinium"}, Th:{number:90, name:"Thorium"}, Pa:{number:91, name:"Protactinium"}, U:{number:92, name:"Uranium"}, Np:{number:93, name:"Neptunium"}, Pu:{number:94, name:"Plutonium"}, Am:{number:95, name:"Americium"}, Cm:{number:96, name:"Curium"}, Bk:{number:97, name:"Berkelium"}, Cf:{number:98, name:"Californium"}, Es:{number:99, name:"Einsteinium"}, Fm:{number:100, name:"Fermium"}, Md:{number:101, name:"Mendelevium"}, No:{number:102, name:"Nobelium"}, Lr:{number:103, name:"Lawrencium"}, Rf:{number:104, 
 name:"Rutherfordium"}, Db:{number:105, name:"Dubnium"}, Sg:{number:106, name:"Seaborgium"}, Bh:{number:107, name:"Bohrium"}, Hs:{number:108, name:"Hassium"}, Mt:{number:109, name:"Meitnerium"}, Ds:{number:110, name:"Darmstadtium"}, Rg:{number:111, name:"Roentgenium"}, Cn:{number:112, name:"Copernicium"}};
-// Input 213
+// Input 210
 goog.provide("kemia.query.IQueryAtom");
 kemia.query.IQueryAtom = function() {
 };
@@ -22989,13 +23077,13 @@ kemia.query.IQueryAtom.prototype.matches = function(atom, opt_molecule, opt_sssr
 };
 kemia.query.IQueryAtom.prototype.getNeighbors = function() {
 };
-// Input 214
+// Input 211
 goog.provide("kemia.query.IQueryBond");
 kemia.query.IQueryBond = function(source, target) {
 };
 kemia.query.IQueryBond.prototype.matches = function(bond, opt_molecule, opt_sssr) {
 };
-// Input 215
+// Input 212
 goog.provide("kemia.query.IQuery");
 goog.require("kemia.query.IQueryAtom");
 goog.require("kemia.query.IQueryBond");
@@ -23013,7 +23101,7 @@ kemia.query.IQuery.prototype.findBond = function(atom1, atom2) {
 };
 kemia.query.IQuery.prototype.indexOfAtom = function(atom) {
 };
-// Input 216
+// Input 213
 goog.provide("kemia.query.Query");
 goog.require("kemia.query.IQuery");
 kemia.query.Query = function() {
@@ -23046,7 +23134,7 @@ kemia.query.Query.prototype.findBond = function(atom1, atom2) {
     }
   }return null
 };
-// Input 217
+// Input 214
 goog.provide("kemia.query.QueryAtom");
 goog.require("kemia.query.IQueryAtom");
 kemia.query.QueryAtom = function() {
@@ -23066,7 +23154,7 @@ kemia.query.QueryAtom.prototype.matches = function(atom, opt_molecule, opt_sssr)
 kemia.query.QueryAtom.prototype.getNeighbors = function() {
   return this.neighbors
 };
-// Input 218
+// Input 215
 goog.provide("kemia.query.QueryBond");
 goog.require("kemia.query.IQueryBond");
 kemia.query.QueryBond = function(source, target) {
@@ -23081,7 +23169,7 @@ kemia.query.QueryBond.prototype.matches = function(bond, opt_molecule, opt_sssr)
     return true
   }return false
 };
-// Input 219
+// Input 216
 goog.provide("kemia.query.MoleculeCompiler");
 goog.require("kemia.query.Query");
 goog.require("kemia.query.QueryAtom");
@@ -23105,7 +23193,7 @@ kemia.query.MoleculeCompiler.prototype.compile = function(molecule) {
   }return query
 };
 goog.exportSymbol("kemia.query.MoleculeCompiler.prototype.compile", kemia.query.MoleculeCompiler.prototype.compile);
-// Input 220
+// Input 217
 goog.provide("kemia.query.SmilesCompiler");
 goog.require("kemia.query.IQueryCompiler");
 goog.require("kemia.io.smiles.SmilesParser");
