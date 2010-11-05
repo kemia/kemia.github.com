@@ -7,7 +7,7 @@ title: Kemia Reaction Editor
 
 Welcome to kemia! An open source (Apache Licensed) chemical structure and reaction editor. Our mission is to create the world’s first open source, 100% javascript chemistry toolkit.  
 
-Why?  Because chemists are asking for tools that run in a web browser and scientific discovery works better when collaborative technologies, like the web, are utilized in a scientific context. This work is a collaboration between open source developers at the [European Bioinformatics Institute](http://www.ebi.ac.uk/ "EBI") and [Wingu Inc.](http://www.wingu.com "Wingu")
+Why?  Because chemists are asking for tools that run in a web browser and scientific discovery works better when collaborative technologies, like the web, are utilized in a scientific context. This work is a collaboration between open source developers at the [European Bioinformatics Institute Chemoinformatics and Metabolism Team](http://www.ebi.ac.uk/steinbeck/ "EBI") and [Wingu Inc.](http://www.wingu.com "Wingu")
 
 #What can Kemia Do Today?
 
