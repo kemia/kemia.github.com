@@ -4759,7 +4759,7 @@ kemia.model.Flags.ISINRING = 2;
 kemia.model.Flags.MAX_FLAG_INDEX = 2;
 // Input 40
 goog.provide("kemia.resource.Covalence");
-kemia.resource.Covalence = {C:4, Si:4, N:3, P:3, O:2, S:2, H:1};
+kemia.resource.Covalence = {C:4, Si:4, N:3, P:3, O:2, S:2, H:1, Br:1, Cl:1, I:1, F:1};
 // Input 41
 goog.provide("kemia.model.Atom");
 goog.provide("kemia.model.Atom.Hybridizations");
@@ -4769,12 +4769,12 @@ goog.require("goog.structs.Set");
 goog.require("goog.math.Coordinate");
 kemia.model.Atom = function(opt_symbol, opt_x, opt_y, opt_charge, opt_aromatic, opt_isotope) {
   this.symbol = goog.isDef(opt_symbol) ? opt_symbol : "C";
-  var x = goog.isDef(opt_x) ? opt_x : 0;
-  var y = goog.isDef(opt_y) ? opt_y : 0;
+  var x = opt_x ? opt_x : 0;
+  var y = opt_y ? opt_y : 0;
   this.coord = new goog.math.Coordinate(x, y);
   this.bonds = new goog.structs.Set;
-  this.charge = goog.isDef(opt_charge) ? opt_charge : 0;
-  this.isotope = goog.isDef(opt_isotope) ? opt_isotope : 0;
+  this.charge = opt_charge ? opt_charge : 0;
+  this.isotope = opt_isotope ? opt_isotope : 0;
   this.aromatic = goog.isDef(opt_aromatic) ? opt_aromatic : false;
   this.hybridization = null;
   this.flags = new Array(kemia.model.Flags.MAX_FLAG_INDEX + 1)
@@ -12926,8 +12926,7 @@ kemia.model.Reaction.prototype.addReactant = function(mol) {
         mol.translate(diff)
       })
     }goog.asserts.assert(this.isReactant(mol))
-  }this.addMolecule(mol);
-  kemia.model.Reaction.removeOverlap(this.getReactants())
+  }this.addMolecule(mol)
 };
 kemia.model.Reaction.prototype.getReactants = function() {
   return goog.array.filter(this.molecules, this.isReactant, this)
@@ -12947,7 +12946,7 @@ kemia.model.Reaction.prototype.addProduct = function(mol) {
       var r_diff;
       if(reactants.length > 0) {
         var reactant_box = kemia.model.Reaction.boundingBox(reactants);
-        r_diff = new goog.math.Vec2(reactant_box.right + kemia.model.Reaction.MOLECULE_MARGIN, 0)
+        r_diff = new goog.math.Vec2(-arrow.target.x + reactant_box.right + kemia.model.Reaction.MOLECULE_MARGIN, 0)
       }else {
         r_diff = new goog.math.Vec2(kemia.model.Reaction.MOLECULE_MARGIN, 0)
       }arrow.translate(r_diff);
@@ -13074,7 +13073,6 @@ kemia.model.Reaction.removeOverlap = function(molecules) {
   return molecules
 };
 kemia.model.Reaction.prototype.centerArrow = function() {
-  this.logger.info("centerArrow");
   if(this.arrows.length > 0) {
     var arrow = this.arrows[0];
     var box1 = kemia.model.Reaction.boundingBox(this.getReactants());
@@ -13092,10 +13090,24 @@ kemia.model.Reaction.prototype.centerArrow = function() {
     arrow.translate(diff)
   }
 };
+kemia.model.Reaction.prototype.translate = function(vector) {
+  goog.array.forEach(this.molecules, function(mol) {
+    mol.translate(vector)
+  });
+  goog.array.forEach(this.pluses, function(plus) {
+    plus.translate(vector)
+  });
+  goog.array.forEach(this.arrows, function(arrow) {
+    arrow.translate(vector)
+  })
+};
 // Input 125
 goog.provide("kemia.model.Plus");
 kemia.model.Plus = function(coord) {
   this.coord = goog.isDef(coord) ? coord : new goog.math.Coordinate(0, 0)
+};
+kemia.model.Plus.prototype.translate = function(vector) {
+  this.coord = goog.math.Coordinate.sum(this.coord, vector)
 };
 // Input 126
 goog.provide("goog.json");
@@ -18201,6 +18213,11 @@ kemia.controller.plugins.Move.prototype.handleMouseMove = function(e) {
                     e.currentTarget.highlightGroup = this.highlightPlus(target, e.currentTarget.highlightGroup)
                   }return true
                 }
+              }else {
+                if(!target) {
+                  this.editorObject.getOriginalElement().style.cursor = "all-scroll";
+                  return true
+                }
               }
             }
           }
@@ -18258,6 +18275,11 @@ kemia.controller.plugins.Move.prototype.handleMouseDown = function(e) {
         var arrow = target;
         this.editorObject.dispatchBeforeChange();
         this.dragArrow(e, arrow);
+        this.editorObject.dispatchChange();
+        return true
+      }if(!target) {
+        this.editorObject.dispatchBeforeChange();
+        this.dragCanvas(e);
         this.editorObject.dispatchChange();
         return true
       }
@@ -18605,6 +18627,29 @@ kemia.controller.plugins.Move.prototype.dragMolecule = function(e, molecule) {
     }catch(e) {
       this.logger.severe(e)
     }
+  }, undefined, this);
+  d.startDrag(e)
+};
+kemia.controller.plugins.Move.prototype.dragCanvas = function(e) {
+  var d = new goog.fx.Dragger(this.editorObject.getOriginalElement());
+  d.addEventListener(goog.fx.Dragger.EventType.DRAG, function(e) {
+    var trans = this.editorObject.reactionRenderer.transform;
+    var x = d.screenX - d.lastX;
+    var y = d.screenY - d.lastY;
+    if(x || y) {
+      var diff = new goog.math.Vec2(x / trans.getScaleX(), y / trans.getScaleY());
+      goog.array.forEach(this.editorObject.getModels(), function(model) {
+        if(model instanceof kemia.model.Reaction) {
+          model.translate(diff)
+        }
+      });
+      this.editorObject.setModelsSilently(this.editorObject.getModels())
+    }d.lastX = d.screenX;
+    d.lastY = d.screenY
+  }, undefined, this);
+  d.addEventListener(goog.fx.Dragger.EventType.END, function(e) {
+    this.editorObject.setModelsSilently(this.editorObject.getModels());
+    d.dispose()
   }, undefined, this);
   d.startDrag(e)
 };
@@ -19125,7 +19170,7 @@ kemia.controller.plugins.AtomEdit.prototype.isSupportedCommand = function(comman
   return command == kemia.controller.plugins.AtomEdit.COMMAND
 };
 kemia.controller.plugins.AtomEdit.prototype.getTrogClassId = goog.functions.constant(kemia.controller.plugins.AtomEdit.COMMAND);
-kemia.controller.plugins.AtomEdit.SHORTCUTS = [{id:"H", key:"h"}, {id:"C", key:"c"}, {id:"N", key:"n"}, {id:"S", key:"s"}, {id:"P", key:"p"}, {id:"O", key:"o"}, {id:"F", key:"f"}, {id:"Cl", key:"cl"}, {id:"+", key:[goog.events.KeyCodes.EQUALS, goog.ui.KeyboardShortcutHandler.Modifiers.SHIFT]}, {id:"-", key:goog.events.KeyCodes.DASH}];
+kemia.controller.plugins.AtomEdit.SHORTCUTS = [{id:"H", key:"h"}, {id:"C", key:"c"}, {id:"N", key:"n"}, {id:"S", key:"s"}, {id:"P", key:"p"}, {id:"O", key:"o"}, {id:"F", key:"f"}, {id:"I", key:"i"}, {id:"+", key:[goog.events.KeyCodes.EQUALS, goog.ui.KeyboardShortcutHandler.Modifiers.SHIFT]}, {id:"-", key:goog.events.KeyCodes.DASH}];
 kemia.controller.plugins.AtomEdit.prototype.getKeyboardShortcuts = function() {
   return kemia.controller.plugins.AtomEdit.SHORTCUTS
 };
@@ -20325,9 +20370,9 @@ coord:{x:-2.3083, y:0.4635, z:0}, charge:0}, {symbol:"C", coord:{x:-2.3083, y:1.
 stereo:"NOT_STEREO"}, {source:4, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}, {name:"cyclopentane-house", atoms:[{symbol:"C", coord:{x:2.5981, y:0.75, z:0}, charge:0}, {symbol:"C", coord:{x:2.5981, y:2.25, z:0}, charge:0}, {symbol:"C", coord:{x:0, y:2.25, z:0}, charge:0}, {symbol:"C", coord:{x:0, y:0.75, z:0}, charge:0}, {symbol:"C", coord:{x:1.3, y:0, z:0}, charge:0}], bondindex:[{source:0, target:1, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:2, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, 
 {source:2, target:3, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:3, target:4, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:4, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}, {name:"naphthalene", atoms:[{symbol:"C", coord:{x:2.5981, y:0.75, z:0}, charge:0}, {symbol:"C", coord:{x:2.5981, y:2.25, z:0}, charge:0}, {symbol:"C", coord:{x:1.2991, y:3, z:0}, charge:0}, {symbol:"C", coord:{x:0, y:2.25, z:0}, charge:0}, {symbol:"C", coord:{x:0, y:0.75, z:0}, charge:0}, {symbol:"C", coord:{x:1.2991, 
 y:0, z:0}, charge:0}, {symbol:"C", coord:{x:3.8971, y:3, z:0}, charge:0}, {symbol:"C", coord:{x:5.1962, y:2.25, z:0}, charge:0}, {symbol:"C", coord:{x:5.1962, y:0.75, z:0}, charge:0}, {symbol:"C", coord:{x:3.8971, y:0, z:0}, charge:0}], bondindex:[{source:0, target:1, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:2, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:2, target:3, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:3, target:4, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:4, 
-target:5, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:5, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:6, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:6, target:7, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:7, target:8, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:8, target:9, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:9, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}, {name:"cyclobutane", atoms:[{symbol:"C", coord:{x:0, y:0}, charge:null}, 
-{symbol:"C", coord:{x:0, y:1.5}, charge:null}, {symbol:"C", coord:{x:-1.5, y:1.5000000000000002}, charge:null}, {symbol:"C", coord:{x:-1.5000000000000002, y:1.1102230246251565E-16}, charge:null}], bondindex:[{source:0, target:1, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:2, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:2, target:3, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:3, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}, {name:"cyclopropane", atoms:[{symbol:"C", 
-coord:{x:0, y:0}, charge:null}, {symbol:"C", coord:{x:0, y:1.5}, charge:null}, {symbol:"C", coord:{x:-1.2990381056766582, y:0.7500000000000001}, charge:null}], bondindex:[{source:0, target:1, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:2, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:2, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}];
+target:5, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:5, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:6, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:6, target:7, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:7, target:8, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:8, target:9, type:"DOUBLE_BOND", stereo:"NOT_STEREO"}, {source:9, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}, {name:"cyclobutane", atoms:[{symbol:"C", coord:{x:0, y:0}, charge:0}, 
+{symbol:"C", coord:{x:0, y:1.5}, charge:0}, {symbol:"C", coord:{x:-1.5, y:1.5000000000000002}, charge:0}, {symbol:"C", coord:{x:-1.5000000000000002, y:1.1102230246251565E-16}, charge:0}], bondindex:[{source:0, target:1, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:2, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:2, target:3, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:3, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}, {name:"cyclopropane", atoms:[{symbol:"C", coord:{x:0, 
+y:0}, charge:0}, {symbol:"C", coord:{x:0, y:1.5}, charge:0}, {symbol:"C", coord:{x:-1.2990381056766582, y:0.7500000000000001}, charge:0}], bondindex:[{source:0, target:1, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:1, target:2, type:"SINGLE_BOND", stereo:"NOT_STEREO"}, {source:2, target:0, type:"SINGLE_BOND", stereo:"NOT_STEREO"}]}];
 // Input 193
 goog.provide("goog.ui.FlatButtonRenderer");
 goog.require("goog.dom.classes");
@@ -20515,10 +20560,11 @@ kemia.controller.DefaultToolbar.makeAtomBondTemplateButtons = function(buttons) 
   atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:red"}, "O")), true);
   atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:yellow"}, "S")), true);
   atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:orange"}, "P")), true);
-  atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:green"}, "F")));
+  atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:green"}, "F")), true);
   atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:green"}, "Cl")), true);
-  atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:DarkRed"}, "Br")));
-  atom_menu.addChild(new goog.ui.MenuSeparator);
+  atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:DarkRed"}, "Br")), true);
+  atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:purple"}, "I")), true);
+  atom_menu.addChild(new goog.ui.MenuSeparator, true);
   atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:black"}, "R1")), true);
   atom_menu.addChild(new goog.ui.Option(goog.dom.createDom(goog.dom.TagName.DIV, {style:"color:black"}, "R2")), true);
   atom_select.setMenu(atom_menu);
