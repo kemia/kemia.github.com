@@ -33,7 +33,7 @@ Try out the [Demo](http://kemia.github.com/demos/2010/08/23/reaction-editor.html
     * Kemia is pre-alpha software that runs and mostly works.
 * Planned [Milestones](http://kemia.lighthouseapp.com/projects/58696-kemia/milestones)
 
-#Downloads (coming soon)
+#Downloads
 * [Download page](http://github.com/kemia/kemia/downloads)
 
 #Getting Started
