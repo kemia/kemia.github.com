@@ -7,3 +7,4 @@ docs/symbols
 build
 *~
 _site
+.DS_Store
