@@ -11,7 +11,10 @@
 	<link rel="stylesheet"	href="../../../../css/demo.css" />
 		<script>
 			  function initPage(){
-
+				var c = new goog.debug.Console();
+				c.setCapturing(true);
+				var logger = goog.debug.Logger.getLogger('SimpleDemo');
+				logger.info('initPage')
 				var smiles = 'N[C@@H](CCC(=O)N[C@@H](CSSC[C@H](NC(=O)CC[C@H](N)C(O)=O)C(=O)NCC(O)=O)C(=O)NCC(O)=O)C(O)=O';
 				    			var mol=kemia.io.smiles.SmilesParser.parse(smiles);
 				   			kemia.layout.CoordinateGenerator.generate(mol);
