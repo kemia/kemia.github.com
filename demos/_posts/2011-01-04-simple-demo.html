@@ -4,10 +4,10 @@
 		<title>
 			Kemia Simple Demo
 		</title>
-		<script src="../../../../js/kemia.js" type="text/javascript"></script>
-
+	
+	<script src="http://kemia.github.com/js/kemia.js"></script>
 		<script type="text/javascript">
-
+//<![CDATA[
 			  function initPage(){
 				var c = new goog.debug.Console();
 				c.setCapturing(true);
@@ -19,7 +19,7 @@
 				var renderer = new kemia.controller.ReactionEditor(goog.dom.getElement('kemia'));
 				renderer.setModels([mol]);
 			}
-
+		//]]>
 		</script>
 	</head>
 	<body onload="initPage();">
