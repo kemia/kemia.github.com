@@ -1,39 +1,20 @@
+<?xml version="1.0"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns:v="urn:schemas-microsoft-com:vml">
 	<head>
-		<title>Kemia Simple Demo</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<title>IE-Test-VML</title>
 		<style type="text/css">
-		v\:* {
-		behavior:url(#default#VML);
-		display:inline-block;
-		width:100px;
-		height:100px;
-		}
-		</style>
-	
-	<script src="http://kemia.github.com/js/kemia.js"></script>
-		<script type="text/javascript">
-//<![CDATA[
-			  function initPage(){
-				var c = new goog.debug.Console();
-				c.setCapturing(true);
-				var logger = goog.debug.Logger.getLogger('SimpleDemo');
-				logger.info('initPage');
-				var smiles = 'N[C@@H](CCC(=O)N[C@@H](CSSC[C@H](NC(=O)CC[C@H](N)C(O)=O)C(=O)NCC(O)=O)C(=O)NCC(O)=O)C(O)=O';
-				var mol=kemia.io.smiles.SmilesParser.parse(smiles);
-				kemia.layout.CoordinateGenerator.generate(mol);
-				var renderer = new kemia.controller.ReactionEditor(goog.dom.getElement('kemia'));
-				renderer.setModels([mol]);
-			}
-		//]]>
-		</script>
+v\:* {
+behavior:url(#default#VML);
+display:inline-block;
+width:100px;
+height:100px;
+}
+</style>
 	</head>
-	<body onload="initPage();">
-		<v:rect fillcolor="green" />
-		<v:oval style="width:100pt;height:50pt" fillcolor="red" />
-		<fieldset>
-			<legend>Glutathione disulphide</legend>
-			<div id="kemia" style="width: 100%; height: 400px"></div>
-		</fieldset>
+	<body>
+		<v:rect fillcolor="green"></v:rect>
+		<v:oval style="width:100pt;height:50pt" fillcolor="red"></v:oval>
 	</body>
 </html>
