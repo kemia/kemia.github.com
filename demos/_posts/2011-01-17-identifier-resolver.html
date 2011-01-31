@@ -1,0 +1,119 @@
+
+<html>
+<head>
+
+
+<title>Kemia Indentifier Resolver Demo</title>
+<script src="../../../../js/kemia.js"></script>
+<link rel="stylesheet" href="../../../../css/kemia.css" />
+<link rel="stylesheet"	href="../../../../css/demo.css" />
+
+  <style> 
+  .modal-dialog-bg {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    background-color: #FFF;
+  }
+ 
+  .modal-dialog {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 300px;
+    background-color: #AAF;
+    border: 2px solid #99c0ff;
+  }
+ 
+  .modal-dialog-title {
+    position:relative;
+    background: #C3D9FF;
+    padding: 4px;
+    font: bold 11px verdana;
+    cursor: default;
+  }
+ 
+  .modal-dialog-content {
+    background: #E8EEF7;
+    padding: 12px 18px 12px 18px;  font: normal 12px verdana;
+    font: normal 12px verdana;
+  }
+ 
+  .modal-dialog-userInput {
+    font: normal 12px verdana;
+    width: 90%;
+  }
+ 
+  .modal-dialog-buttons {
+    background: #E8EEF7;
+    padding: 4px;
+    font: normal 12px verdana;
+    text-align: right;
+  }
+ 
+  .modal-dialog-buttons button {
+    margin: 5px;
+  }
+  </style>
+
+<script>
+var mol_renderer;
+function initPage(){
+	mol_renderer = new kemia.controller.ReactionEditor(goog.dom.getElement('kemia'),{background : {color : 'white'}});   
+}
+
+var promptHandler = function(identifier) {
+  if (identifier != null) {
+	var query = {
+		'_id' : '6632fdbab9a8b73a94fc7b16f68a10d4',
+		'_render' : 'json',
+		'data_format' : 'sdf',
+		'identifier' : identifier
+		};
+	  var jsonp = new goog.net.Jsonp(
+		new goog.Uri('http://pipes.yahoo.com/pipes/pipe.run'));
+
+	  jsonp.send(query,
+		function(response){
+			if(response.error=='notfound'){
+				mol_renderer.clear();
+				alert("Not Found");
+				return;
+			}else{
+				alert(response.content);
+				var mol=kemia.io.mdl.readMolfile(response.content);
+    			mol_renderer.setModels([mol]);
+			}
+		},
+		function(payload){
+			alert(payload);
+		},
+		'_');
+  }
+}
+ 
+var prompt = new goog.ui.Prompt(
+  'Enter structure identifier (name, SMILES, InChi, Iupac name, etc.) to search',
+  'Name (default is Aspirin)',
+  promptHandler);
+</script>
+</head>
+
+<body onload="initPage();">
+<h1>Kemia</h1>
+<fieldset>
+<legend>Name to Structure</legend> 
+  <p> 
+  <a href="#" onclick="prompt.setDefaultValue('aspirin');prompt.setVisible(true);"> 
+    Enter a name
+  </a> 
+  </p>
+<br>
+<div id="kemia" style="width: 100%; height: 400px"></div>
+<br>
+</fieldset>
+  <div id="perf"></div> 
+<br> 
+
+</body>
+</html>
